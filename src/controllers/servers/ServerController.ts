@@ -26,7 +26,7 @@ export class ServerController extends Controller {
 
   @Check(CreateServerSchema)
   async 'POST /'(ctx: Context): Promise<Server> {
-    const serverCount = await Member.count(`id = ${ctx.user.id}`)
+    const serverCount = await Member.count(sql`id = ${ctx.user.id}`)
 
     if (serverCount >= config.limits.user.servers) {
       ctx.throw('MAXIMUM_SERVERS')

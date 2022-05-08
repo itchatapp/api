@@ -1,7 +1,7 @@
 import postgres from 'postgres'
 import url from 'node:url'
-import { join } from 'node:path'
 import config from '../config'
+import { join } from 'node:path'
 import {
   Invite,
   Member,
@@ -14,21 +14,9 @@ import {
   Bot
 } from '../structures'
 
-const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
-const noop = () => { }
+const __dirname = url.fileURLToPath(new URL('.', import.meta.url))
 
 const sql = postgres(config.database.uri, {
-  types: {
-    number: {
-      to: 0,
-      from: [21, 23, 26, 700, 701],
-      serialize: value => {
-        if (value !== null && typeof value === 'object') return JSON.stringify(value)
-        return String(value)
-      },
-      parse: value => Number(value)
-    }
-  },
   transform: {
     row: (x: any) => {
       if ('username' in x) return User.from(x)
@@ -42,8 +30,7 @@ const sql = postgres(config.database.uri, {
       if ('owner_id' in x) return Server.from(x)
       return x
     }
-  },
-  onnotice: noop
+  }
 })
 
 const DATE = '2022-4'

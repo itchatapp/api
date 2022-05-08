@@ -1,7 +1,7 @@
 import Server from './server'
 import { migrate } from './database'
-import config from './config'
 import { logger } from './utils'
+import config from './config'
 
 export const server = new Server()
 
@@ -19,13 +19,11 @@ try {
   await server.listen(config.port)
 
   logger.log('Server running on port:', config.port)
-} catch (err) {
-  
+} catch (err) {  
   logger
-    .error('Failed to Init the server....')
+    .error('Failed to start the server....')
     .error(err)
     .error('Exiting...')
-
   process.exit(-1)
 }
 

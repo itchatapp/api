@@ -1,6 +1,7 @@
 import { Context, Controller, Check } from "./Controller"
 import { Bot, CreateBotSchema } from '../structures'
 import config from '../config';
+import sql from "../database"
 
 export class BotController extends Controller {
   'USE /'() {
@@ -19,7 +20,7 @@ export class BotController extends Controller {
 
   @Check(CreateBotSchema)
   async 'POST /'(ctx: Context): Promise<Bot> {
-    const botCount = await Bot.count(`owner_id = ${ctx.user.id}`)
+    const botCount = await Bot.count(sql`owner_id = ${ctx.user.id}`)
 
     if (botCount >= config.limits.user.bots) ctx.throw('MAXIMUM_BOTS')
 

@@ -1,6 +1,7 @@
 import { Controller, Context, Check, Permission, Next } from '../Controller'
 import { Channel, CreateServerChannelSchema, ChannelTypes, Member, ServerChannel } from '../../structures'
 import config from '../../config'
+import sql from '../../database'
 
 
 export class ServerChannelController extends Controller {
@@ -33,7 +34,7 @@ export class ServerChannelController extends Controller {
   @Permission.has('MANAGE_CHANNELS')
   async 'POST /'(ctx: Context) {
     const server_id = ctx.params.server_id
-    const channelCount = await Channel.count(`server_id = ${server_id}`)
+    const channelCount = await Channel.count(sql`server_id = ${server_id}`)
 
     if (channelCount >= config.limits.server.channels) {
       ctx.throw('MAXIMUM_CHANNELS')

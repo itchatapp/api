@@ -2,6 +2,7 @@ import { QueryConfig as QueryBuilder } from 'pg-query-config'
 import { Snowflake } from '../utils'
 import { HTTPError, APIErrors } from '../errors'
 import sql from '../database'
+import { PendingQuery, Row } from 'postgres'
 
 export type WhereFunction<T> = (valueRefSet: Set<T>, args: T[]) => string
 export type WhereCondition<T> = { [P in keyof T]?: WhereCondition<T[P]> | T[P] | WhereFunction<T[P]> | Array<T[P]> }
@@ -50,8 +51,8 @@ export abstract class Base {
     return sql.unsafe(query.text, query.values) as Promise<T[]>
   }
 
-  static async count(where: string): Promise<number> {
-    const [{ count }] = await sql.unsafe(`SELECT COUNT(id) as count FROM ${this.tableName} WHERE ${where}`)
+  static async count(query: PendingQuery<Row[]>): Promise<number> { 
+    const [{ count }] = await sql`SELECT COUNT(id) FROM ${sql(this.tableName)} WHERE ${query}`
     return count
   }
 

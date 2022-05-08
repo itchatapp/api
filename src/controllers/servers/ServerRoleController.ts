@@ -1,6 +1,7 @@
 import { Controller, Context, Check, Next, Permission } from '../Controller'
 import { Role, CreateRoleSchema, Member } from '../../structures'
 import config from '../../config'
+import sql from '../../database'
 
 
 export class ServerRoleController extends Controller {
@@ -28,7 +29,7 @@ export class ServerRoleController extends Controller {
   @Check(CreateRoleSchema)
   @Permission.has('MANAGE_ROLES')
   async 'POST /'(ctx: Context): Promise<Role> {
-    const roleCount = await Role.count(`server_id = ${ctx.params.server_id}`)
+    const roleCount = await Role.count(sql`server_id = ${ctx.params.server_id}`)
 
     if (roleCount >= config.limits.server.roles) {
       ctx.throw('MAXIMUM_ROLES')

@@ -1,9 +1,10 @@
-import { Context, Check, Limit } from '../Controller'
+import { Controller, Context, Check, Limit } from '../Controller'
 import { Channel, ChannelTypes, CreateGroupSchema, GroupChannel, User } from '../../structures'
 import { Permissions } from '../../utils'
 import { array } from 'pg-query-config'
 import config from '../../config'
-import { Controller } from '@itchatt/controllers'
+import sql from '../../database'
+
 
 @Limit('5/5s')
 export class ChannelController extends Controller {
@@ -20,7 +21,7 @@ export class ChannelController extends Controller {
 
   @Check(CreateGroupSchema)
   async 'POST /'(ctx: Context) {
-    const groupCount = await Channel.count(`type = ${ChannelTypes.GROUP} AND recipients::jsonb ? ${ctx.user.id}`)
+    const groupCount = await Channel.count(sql`type = ${ChannelTypes.GROUP} AND recipients::jsonb ? ${ctx.user.id}`)
 
     if (groupCount >= config.limits.user.groups) {
       ctx.throw('MAXIMUM_GROUPS')
