@@ -1,4 +1,6 @@
 import postgres from 'postgres'
+import url from 'node:url'
+import { join } from 'node:path'
 import config from '../config'
 import {
   Invite,
@@ -8,12 +10,25 @@ import {
   Session,
   Channel,
   Role,
-  Server
+  Server,
+  Bot
 } from '../structures'
 
+const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
 const noop = () => { }
 
-export default postgres(config.database.uri, {
+const sql = postgres(config.database.uri, {
+  types: {
+    number: {
+      to: 0,
+      from: [21, 23, 26, 700, 701],
+      serialize: value => {
+        if (value !== null && typeof value === 'object') return JSON.stringify(value)
+        return String(value)
+      },
+      parse: value => Number(value)
+    }
+  },
   transform: {
     row: (x: any) => {
       if ('username' in x) return User.from(x)
@@ -23,9 +38,18 @@ export default postgres(config.database.uri, {
       if ('token' in x) return Session.from(x)
       if ('type' in x) return Channel.from(x)
       if ('hoist' in x) return Role.from(x)
+      if ('owner_id' in x && 'presence' in x) return Bot.from(x)
       if ('owner_id' in x) return Server.from(x)
       return x
     }
   },
   onnotice: noop
 })
+
+const DATE = '2022-4'
+
+export const migrate = async () => {
+  await sql.file(join(__dirname, `../../assets/migrations/${DATE}.sql`))
+}
+
+export default sql

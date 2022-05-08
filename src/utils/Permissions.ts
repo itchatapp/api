@@ -1,152 +1,108 @@
 import { is } from '.'
-import { ChannelTypes, Member, Server, User, Channel } from '../structures'
-import { BitField } from './BitField'
+import { Member, Server, User, Channel, AnyChannel, OverwriteTypes, CategoryChannel, RelationshipStatus } from '../structures'
+import { Request } from '@tinyhttp/app'
+import { Context } from '../controllers/Controller'
+import { Permissions as BasicPermissions, Badges, DEFAULT_PERMISSION_DM } from '@itchatt/utils'
 
-export type PermissionString = keyof typeof FLAGS
-export type PermissionsResolvable = number | Permissions | PermissionString | PermissionsResolvable[]
 
 export interface FetchPermissionsOptions {
   user: User
-  channel?: Channel | ID
-  server?: Server | ID
+  channel?: Channel | string
+  server?: Server | string
 }
 
-const FLAGS = {
-  // Admin
-  ADMINISTRATOR: 1 << 0,
 
+export class Permissions extends BasicPermissions {
+  target_id!: string
 
-  // Channel
-  VIEW_CHANNEL: 1 << 1,
-  SEND_MESSAGES: 1 << 2,
-  READ_MESSAGE_HISTORY: 1 << 3,
-  EMBED_LINKS: 1 << 4,
-  UPLOAD_FILES: 1 << 5,
+  static async from(request: Request | Context): Promise<Permissions> {
+    if (request instanceof Context) request = request.request
+    if (typeof request.permissions !== 'undefined') return request.permissions
 
+    const result = await Permissions.fetch({
+      user: request.user,
+      server: request.params.server_id,
+      channel: request.params.channel_id
+    })
 
-  // Manage
-  MANAGE_SERVER: 1 << 6,
-  MANAGE_CHANNELS: 1 << 7,
-  MANAGE_MESSAGES: 1 << 8,
-  MANAGE_ROLES: 1 << 9,
-  MANAGE_NICKNAMES: 1 << 10,
-  BAN_MEMBERS: 1 << 11,
-  KICK_MEMBERS: 1 << 12,
-
-
-  // Member
-  CHANGE_NICKNAME: 1 << 13,
-  INVITE_OTHERS: 1 << 14
-} as const
-
-export declare interface Permissions {
-  serialize(): Record<PermissionString, boolean>
-  any(bit: PermissionsResolvable): boolean
-  add(...bits: PermissionsResolvable[]): this
-  missing(bits: PermissionsResolvable): PermissionString[]
-  remove(...bits: PermissionsResolvable[]): this
-  has(bit: PermissionsResolvable): boolean
-  toArray(): PermissionString[]
-  equals(bit: PermissionsResolvable): boolean
-}
-
-export class Permissions extends BitField {
-  static FLAGS: typeof FLAGS
-  constructor(...bits: PermissionsResolvable[]) {
-    super(bits)
+    return request.permissions = result
   }
 
   static async fetch({ user, server, channel }: FetchPermissionsOptions): Promise<Permissions> {
-    if (is.snowflake(user)) user = await User.findOne({ id: user })
     if (is.snowflake(server)) server = await Server.findOne({ id: server })
-    if (is.snowflake(channel)) channel = await Channel.findOne({ id: channel })
+    if (is.snowflake(channel)) channel = await Channel.findOne<AnyChannel>({ id: channel })
+    if (!server && channel?.inServer()) server = await Server.findOne({ id: channel.server_id })
+
+    let member: Member | null = null
 
     const permissions = new Permissions()
 
+    const admin = () => permissions.set(Permissions.FLAGS.ADMINISTRATOR)
+
+    permissions.target_id = user.id
+
+    if (server) permissions.target_id = server.id
+    if (channel) permissions.target_id = channel.id
+
+    // Yes. we do that.
+    if (user.badges !== 0n && new Badges(user.badges).has(Badges.FLAGS.STAFF)) {
+      return admin()
+    }
+
+
     if (server) {
-      const member = await Member.findOne({ id: user.id })
+      if (user.id === server.owner_id) return admin()
 
-      if (member.id === server.owner_id) {
-        return permissions.add(Permissions.FLAGS.ADMINISTRATOR)
-      } else {
-        permissions.add(server.permissions) // Add default @everyone permissions.
+      permissions.add(server.permissions) // Add default @everyone permissions.
 
-        const roles = await server.fetchRoles()
+      member = await user.member(server)
 
-        for (const role of roles) {
-          if (member.roles.includes(role.id)) permissions.add(role.permissions)
-        }
+      for (const role of await server.fetchRoles()) {
+        if (member.roles.includes(role.id)) permissions.add(role.permissions)
       }
+
+      // We don't need any other checks if they has the "ADMINISTRATOR" permission.
+      if (permissions.has(Permissions.FLAGS.ADMINISTRATOR)) return permissions
     }
 
-    if (permissions.has(Permissions.FLAGS.ADMINISTRATOR, false)) {
-      return permissions
+    if (channel?.isGroup() && channel.recipients.includes(user.id)) {
+      if (channel.owner_id === user.id) return admin()
+      permissions.add(channel.permissions)
     }
 
-    if (channel) {
-      switch (channel.type) {
-        case ChannelTypes.GROUP:
-          if (channel.owner_id === user.id) {
-            permissions.add(Permissions.FLAGS.ADMINISTRATOR)
-          } else if (channel.recipients.includes(user.id)) {
-            permissions.add(channel.permissions)
-          }
-          break
-        case ChannelTypes.DM:
-          if (channel.recipients.includes(user.id)) permissions.add(DEFAULT_PERMISSION_DM)
-          break
-        case ChannelTypes.TEXT:
-        case ChannelTypes.CATEGORY:
-          if (!server || typeof server === 'string') server = await Server.findOne({ id: channel.server_id! })
+    if (channel?.isDM() && channel.recipients.includes(user.id)) {
+      permissions.add(DEFAULT_PERMISSION_DM)
 
-          if (user.id === server.owner_id) {
-            permissions.add(Permissions.FLAGS.ADMINISTRATOR)
-            break
-          }
+      const isBlocked = channel.recipients.some(id => {
+        return (
+          user.relations[id] === RelationshipStatus.BLOCKED ||
+          user.relations[id] === RelationshipStatus.BLOCKED_BY_OTHER
+        )
+      })
 
-          permissions.add(await Permissions.fetch({ server, user }))
+      if (isBlocked) permissions.remove(Permissions.FLAGS.SEND_MESSAGES)
+    }
 
-          // TODO: Add channel overwrites.
-          break
-        default:
-          throw new Error(`Unknown channel type - ${channel}`)
+    if (channel?.isText() || channel?.isCategory() /* | channel?.isVoice() */) {
+      member ??= await Member.findOne({ id: user.id })
+
+      const overwrites = [...channel.overwrites]
+
+      if (!channel.isCategory() && channel.parent_id) {
+        const parent = await Channel.findOne<CategoryChannel>({ id: channel.parent_id })
+        overwrites.push(...parent.overwrites)
+      }
+
+      for (const overwrite of overwrites) {
+        if (
+          (overwrite.type === OverwriteTypes.MEMBER && overwrite.id === user.id) ||
+          (overwrite.type === OverwriteTypes.ROLE && member.roles.includes(overwrite.id))
+        ) {
+          permissions.add(overwrite.allow).remove(overwrite.deny)
+        }
       }
     }
 
     return permissions
   }
-
-  missing(bits: PermissionsResolvable, checkAdmin = true): PermissionString[] {
-    if (checkAdmin && super.has(Permissions.FLAGS.ADMINISTRATOR)) return []
-    return super.missing(bits) as PermissionString[]
-  }
-
-  any(bit: PermissionsResolvable, checkAdmin = true): boolean {
-    if (checkAdmin && super.has(Permissions.FLAGS.ADMINISTRATOR)) return true
-    return super.any(bit)
-  }
-
-  has(bit: PermissionsResolvable, checkAdmin = true): boolean {
-    if (checkAdmin && super.has(Permissions.FLAGS.ADMINISTRATOR)) return true
-    return super.has(bit)
-  }
 }
-
-Permissions.FLAGS = FLAGS
-
-
-export const DEFAULT_PERMISSION_DM = new Permissions([
-  'VIEW_CHANNEL',
-  'SEND_MESSAGES',
-  'EMBED_LINKS',
-  'UPLOAD_FILES',
-  'READ_MESSAGE_HISTORY'
-]).bitfield
-
-export const DEFAULT_PERMISSION_EVERYONE = new Permissions([
-  'VIEW_CHANNEL',
-  'SEND_MESSAGES',
-  'EMBED_LINKS',
-  'UPLOAD_FILES',
-  'READ_MESSAGE_HISTORY'
-]).bitfield

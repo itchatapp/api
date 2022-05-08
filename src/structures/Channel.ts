@@ -1,6 +1,6 @@
-import { Base } from './Base'
+import { Base, QueryBuilder, WhereCondition } from '.'
 import { DEFAULT_PERMISSION_DM, validator } from '../utils'
-import { getaway } from '../getaway'
+import { APIErrors, HTTPError } from '../errors'
 import sql from '../database'
 import config from '../config'
 
@@ -9,137 +9,183 @@ export enum ChannelTypes {
   TEXT,
   VOICE,
   CATEGORY,
-  GROUP,
-  UNKNOWN = -1
+  GROUP
 }
 
-export enum OverwriteType {
+export enum OverwriteTypes {
   ROLE,
   MEMBER
 }
 
-export interface ChannelOverwrite {
-  id: ID
-  type: OverwriteType
-  allow: number
-  deny: number
+export interface Overwrite {
+  id: string
+  type: OverwriteTypes
+  allow: bigint
+  deny: bigint
 }
 
-export type ChannelOverwrites = ChannelOverwrite[]
-
-export interface DMChannel extends Channel {
-  type: ChannelTypes.DM
-}
-
-export interface Group extends Channel {
+interface CreateGroupChannelOptions extends Options<GroupChannel> {
   type: ChannelTypes.GROUP
   name: string
-  owner_id: ID
-  permissions: number
-  recipients: ID[]
+  recipients: string[]
+  owner_id: string
 }
 
-export interface TextChannel extends Channel {
+interface CreateTextChannelOptions extends Options<TextChannel> {
   type: ChannelTypes.TEXT
   name: string
-  server_id: ID
-  overwrites: ChannelOverwrites
+  server_id: string
 }
 
-export interface Category extends Channel {
+interface CreateCategoryChannelOptions extends Options<CategoryChannel> {
   type: ChannelTypes.CATEGORY
   name: string
-  server_id: ID
-  parents: ID[]
-  overwrites: ChannelOverwrites
+  server_id: string
 }
+
+
+interface CreateDMChannelOptions extends Options<DMChannel> {
+  type: ChannelTypes.DM
+  recipients: string[]
+}
+
+export const CreateServerChannelSchema = validator.compile({
+  type: {
+    type: 'enum',
+    values: Object.keys(ChannelTypes).filter(k => !isNaN(+k))
+  },
+  name: `string|min:1|max:${config.limits.channel.name}`,
+  topic: `string|min:1|max:${config.limits.channel.topic}|optional`
+})
 
 
 export const CreateGroupSchema = validator.compile({
-  name: {
-    type: 'string',
-    min: 1,
-    max: config.limits.group.name
-  }
+  name: `string|min:1|max:${config.limits.group.name}`
 })
 
+export type AnyChannel = TextChannel | DMChannel | CategoryChannel | GroupChannel
 
-export const CreateTextChannelSchema = validator.compile({
-  name: {
-    type: 'string',
-    min: 1,
-    max: config.limits.channel.name
-  },
-  topic: {
-    type: 'string',
-    min: 1,
-    max: config.limits.channel.topic,
-    optional: true
-  },
-  $$strict: true
-})
-
-export const CreateCategorySchema = validator.compile({
-  name: {
-    type: 'string',
-    min: 1,
-    max: config.limits.channel.name
-  }
-})
-
-
+export type ServerChannel = TextChannel | CategoryChannel /* | VoiceChannel */
 
 export class Channel extends Base {
-  type = ChannelTypes.UNKNOWN
-  name?: string | null = null
-  topic?: string | null = null
-  server_id?: ID | null = null
-  owner_id: ID | null = null
-  overwrites: ChannelOverwrites | null = null
-  icon: string | null = null
-  permissions = DEFAULT_PERMISSION_DM
-  parents: ID[] = []
-  recipients: ID[] = []
+  readonly type!: ChannelTypes
 
+  static async findOne<T = AnyChannel>(
+    where: WhereCondition<T> | ((query: QueryBuilder<T>) => unknown)
+  ): Promise<T> {
+    const query = new QueryBuilder<T>({ table: this.tableName, limit: 1 })
 
-  static async onCreate(self: Channel): Promise<void> {
-    if (self.recipients) {
-      const recipients = self.recipients
-      await Promise.all(recipients.map((id) => getaway.subscribe(id, self.id)))
+    typeof where === 'function' ? where(query) : query.where(where)
+
+    const [item] = await sql.unsafe(query.text, query.values) as [T?]
+
+    if (!item) {
+      const tag = `UNKNOWN_${this.name.toUpperCase()}` as keyof typeof APIErrors
+
+      if (!(tag in APIErrors)) {
+        throw new Error('Unhandled type')
+      }
+
+      throw new HTTPError(tag)
     }
-    await getaway.publish(self.id, 'CHANNEL_CREATE', self)
+
+    return item
   }
 
-  static async onUpdate(self: Channel): Promise<void> {
-    await getaway.publish(self.id, 'CHANNEL_UPDATE', self)
+  static async find<T = AnyChannel>(
+    where: WhereCondition<T> | ((query: QueryBuilder<T>) => unknown),
+    limit = 100
+  ): Promise<T[]> {
+    const query = new QueryBuilder<T>({ table: this.tableName, limit })
+
+    typeof where === 'function' ? where(query) : query.where(where)
+
+    return sql.unsafe(query.text, query.values) as Promise<T[]>
   }
 
-  static async onDelete(self: Channel): Promise<void> {
-    await getaway.publish(self.id, 'CHANNEL_DELETE', { id: self.id })
+  isText(): this is TextChannel {
+    return this.type === ChannelTypes.TEXT
   }
 
-  static from(opts: { type: ChannelTypes.TEXT } & Partial<TextChannel>): TextChannel
-  static from(opts: { type: ChannelTypes.DM } & Partial<DMChannel>): DMChannel
-  static from(opts: { type: ChannelTypes.CATEGORY } & Partial<Category>): Category
-  static from(opts: { type: ChannelTypes.GROUP } & Partial<Group>): Group
-  static from(opts: Partial<Channel>): Channel {
-    return Object.assign(new Channel(), opts)
+  isCategory(): this is CategoryChannel {
+    return this.type === ChannelTypes.CATEGORY
   }
 
-  static async init(): Promise<void> {
-    await sql.unsafe(`CREATE TABLE IF NOT EXISTS ${this.tableName} (
-            id BIGINT PRIMARY KEY,
-            type INTEGER NOT NULL,
-            name VARCHAR(${config.limits.channel.name}),
-            topic VARCHAR(${config.limits.channel.topic}),
-            permissions BIGINT DEFAULT 0,
-            overwrites JSONB,
-            recipients JSONB,
-            parents JSONB,
-            owner_id BIGINT,
-            server_id BIGINT,
-            FOREIGN KEY (owner_id) REFERENCES users(id),
-            FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE
-        )`)
+  isDM(): this is DMChannel {
+    return this.type === ChannelTypes.DM
   }
+
+  isGroup(): this is GroupChannel {
+    return this.type === ChannelTypes.GROUP
+  }
+
+  isVoice(): this is VoiceChannel {
+    return this.type === ChannelTypes.VOICE
+  }
+
+  inServer(): this is ServerChannel {
+    return 'server_id' in this
+  }
+
+  static from(opts: CreateTextChannelOptions): TextChannel
+  static from(opts: CreateDMChannelOptions): DMChannel
+  static from(opts: CreateCategoryChannelOptions): CategoryChannel
+  static from(opts: CreateGroupChannelOptions): GroupChannel
+  /* static from(opts: CreateVoiceChannelOptions): VoiceChannel */
+  static from(opts: { type: ChannelTypes } & Partial<AnyChannel>): AnyChannel {
+    let channel: AnyChannel
+
+    switch (opts.type) {
+      case ChannelTypes.TEXT: channel = new TextChannel()
+        break
+      case ChannelTypes.DM: channel = new DMChannel()
+        break
+      case ChannelTypes.GROUP: channel = new GroupChannel()
+        break
+      case ChannelTypes.CATEGORY: channel = new CategoryChannel()
+        break
+      // case ChannelTypes.VOICE: channel = new VoiceChannel()
+      //   break
+      default: throw new Error('Unknown channel type')
+    }
+
+    return Object.assign(channel, opts)
+  }
+}
+
+
+
+export class DMChannel extends Channel {
+  readonly type = ChannelTypes.DM
+  recipients: string[] = []
+}
+
+export class GroupChannel extends Channel {
+  readonly type = ChannelTypes.GROUP
+  name!: string
+  owner_id!: string
+  permissions = DEFAULT_PERMISSION_DM
+  recipients: string[] = []
+}
+
+export class TextChannel extends Channel {
+  readonly type = ChannelTypes.TEXT
+  name!: string
+  server_id!: string
+  overwrites: Overwrite[] = []
+  parent_id: Nullable<string> = null
+}
+
+export class CategoryChannel extends Channel {
+  readonly type = ChannelTypes.CATEGORY
+  name!: string
+  server_id!: string
+  overwrites: Overwrite[] = []
+}
+
+
+export class VoiceChannel extends Channel {
+  readonly type = ChannelTypes.VOICE
+  name!: string
+  // TODO: Add other stuff...
 }

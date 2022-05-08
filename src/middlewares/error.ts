@@ -8,7 +8,6 @@ export const error = () => async (err: unknown, req: Request, res: Response): Pr
   } else {
     logger
       .warn(`Unknown Error at ${req.path}`)
-      .warn(`Client IP: ${req.ip ?? 'Unknown'}`)
       .error(err)
     res.sendStatus(502)
   }
