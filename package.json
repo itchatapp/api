@@ -7,7 +7,8 @@
     "start:quick": "npm run build && npm run start",
     "build": "tsc",
     "format": "echo \"Soon\"",
-    "docs": "node docs/generate.js"
+    "docs": "node docs/generate.js",
+    "test": "tsc --noEmit && echo 'All specs passed validation. You are ready to push!'"
   },
   "type": "module",
   "dependencies": {
