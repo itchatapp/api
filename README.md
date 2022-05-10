@@ -13,7 +13,7 @@ Core Backend API
 - [Redis](https://wikipedia.org/wiki/Redis) ([Lib](https://github.com/luin/ioredis))
 - [HTTP](https://wikipedia.org/wiki/Web_server) ([Lib](https://github.com/tinyhttp/tinyhttp))
 
-## Development
+## 🚧 Development
 
 #### Commands
 
