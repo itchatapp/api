@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS roles (
     name VARCHAR(32) NOT NULL,
     permissions BIGINT NOT NULL,
     hoist BOOLEAN NOT NULL,
+    color INTEGER DEFAULT 0,
     server_id BIGINT NOT NULL,
     FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE
 );
