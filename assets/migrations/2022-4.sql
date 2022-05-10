@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS sessions (
     id BIGINT PRIMARY KEY,
     token VARCHAR(64) NOT NULL,
     user_id BIGINT NOT NULL,
-    info JSONB,
+    info JSONB DEFAULT '{}'::jsonb,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS channels (
     FOREIGN KEY (parent_id) REFERENCES channels(id)
 );
 
-CREATE TABLE IF NOT EXISTS memebers (
+CREATE TABLE IF NOT EXISTS members (
     id BIGINT PRIMARY KEY,
     joined_at TIMESTAMP NOT NULL,
     nickname VARCHAR(32),
