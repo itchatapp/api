@@ -4,9 +4,9 @@ CREATE TABLE IF NOT EXISTS users (
     password VARCHAR(32) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
     avatar VARCHAR(64),
-    badges INTEGER NOT NULL,
-    presence JSONB NOT NULL,
-    relations JSONB NOT NULL,
+    badges BIGINT NOT NULL DEFAULT 0,
+    presence JSONB NOT NULL DEFAULT '{}'::jsonb,
+    relations JSONB NOT NULL DEFAULT '{}'::jsonb,
     verified BOOLEAN DEFAULT FALSE
 );
 
