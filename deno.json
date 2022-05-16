@@ -1,0 +1,13 @@
+{
+  "importMap": "./import.json",
+  "compilerOptions": {
+    "strict": true,
+    "types": ["./src/@types/mod.d.ts"]
+  },
+  "fmt": {
+    "options": {
+      "singleQuote": true,
+      "lineWidth": 200
+    }
+  }
+}

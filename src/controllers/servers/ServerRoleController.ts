@@ -1,10 +1,12 @@
-import { Controller, Context, Check, Next, Permission } from '../Controller'
-import { Role, CreateRoleSchema, Member } from '../../structures'
-import config from '../../config'
-import sql from '../../database'
+import { Controller, Context, Check, Next, Permission } from '@utils'
+import { Role, CreateRoleSchema, Member } from '@structures'
+import config from '@config'
+import sql from '@sql'
 
 
 export class ServerRoleController extends Controller {
+  path = '/servers/:server_id/roles'
+  
   async 'USE /'(ctx: Context, next: Next) {
     const exists = await Member.findOne({
       id: ctx.user.id,

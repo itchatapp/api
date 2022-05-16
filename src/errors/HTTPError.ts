@@ -48,16 +48,20 @@ export const APIErrors = {
   BOT_ONLY: [400],
   USER_ONLY: [400],
   BANNED: [403, 'The user is banned from this server'],
-  CANNOT_EDIT_MESSAGE_BY_OTHER: [400, 'Cannot edit a message authored by another user']
-} as const
+  CANNOT_EDIT_MESSAGE_BY_OTHER: [400, 'Cannot edit a message authored by another user'],
+  INVALID_BODY: [400, 'Invalid body'],
+} as const;
 
+Object.freeze(APIErrors);
 
 export class HTTPError<T extends keyof typeof APIErrors> {
-  message: string
-  status: number
-  constructor(key: T) {
-    const [status, message] = APIErrors[key] ?? [404, 'Unknown error']
-    this.message = message ?? key
-    this.status = status
+  message: string;
+  status: number;
+  body?: unknown;
+  constructor(key: T, body?: unknown) {
+    const [status, message] = APIErrors[key] ?? [404, 'Unknown error'];
+    this.message = message ?? key;
+    this.status = status;
+    if (body) this.body = body;
   }
 }

@@ -1,5 +1,0 @@
-export * from './ServerController'
-export * from './ServerMemberController'
-export * from './ServerChannelController'
-export * from './ServerRoleController'
-export * from './ServerInviteController'

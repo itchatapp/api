@@ -1,22 +1,14 @@
-import { Base } from '.'
-import { nanoid } from 'nanoid'
-import sql from '../database'
-
-export interface CreateInviteOptions extends Options<Invite> {
-  inviter_id: string
-  channel_id: string
-  server_id: string
-}
-
+import { Base } from './Base.ts';
+import { nanoid } from 'nanoid';
 
 export class Invite extends Base {
-  readonly code = nanoid(8)
-  uses = 0
-  inviter_id!: string
-  channel_id!: string
-  server_id!: string
-
-  static from(opts: CreateInviteOptions): Invite {
-    return Object.assign(new Invite(), opts)
+  readonly code = nanoid(8);
+  uses = 0;
+  inviter_id!: string;
+  channel_id!: string;
+  server_id!: string;
+  
+  static from(opts: FromOptions<Invite, 'server_id' | 'channel_id' | 'inviter_id'>): Invite {
+    return Object.assign(new this(), opts);
   }
 }

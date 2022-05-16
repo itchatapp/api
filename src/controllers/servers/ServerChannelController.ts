@@ -1,10 +1,12 @@
-import { Controller, Context, Check, Permission, Next } from '../Controller'
-import { Channel, CreateServerChannelSchema, ChannelTypes, Member, ServerChannel } from '../../structures'
-import config from '../../config'
-import sql from '../../database'
+import { Controller, Context, Check, Permission, Next } from '@utils'
+import { Channel, CreateServerChannelSchema, ChannelTypes, Member, ServerChannel } from '@structures'
+import config from '@config'
+import sql from '@sql'
 
 
 export class ServerChannelController extends Controller {
+  path = '/channels/:server_id'
+  
   async 'USE /'(ctx: Context, next: Next) {
     const exists = await Member.findOne({
       id: ctx.user.id,

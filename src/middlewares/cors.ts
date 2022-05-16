@@ -1,10 +1,11 @@
-import { Request, Response, NextFunction } from '@tinyhttp/app'
+import { RequestHandler } from 'opine';
+import { GenerateGuard } from '@utils';
 
 interface CorsOptions {
-  origin: string
-  methods: string[]
-  headers: string[]
-  optionsSuccessStatus: number
+  origin: string;
+  methods: string[];
+  headers: string[];
+  optionsSuccessStatus: number;
 }
 
 export const cors = (options: Partial<CorsOptions>): typeof middleware => {
@@ -12,21 +13,24 @@ export const cors = (options: Partial<CorsOptions>): typeof middleware => {
     origin = '*',
     methods = ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
     headers = ['content-type', 'content-length'],
-    optionsSuccessStatus = 204
-  } = options
+    optionsSuccessStatus = 204,
+  } = options;
 
-  const middleware = (req: Request, res: Response, next: NextFunction) => {
-    if (origin) res.setHeader('Access-Control-Allow-Origin', origin)
-    if (methods) res.setHeader('Access-Control-Allow-Methods', methods)
-    if (headers) res.setHeader('Access-Control-Allow-Headers', headers)
+  const middleware: RequestHandler = async (req, res, next) => {
+    if (origin) res.append('Access-Control-Allow-Origin', origin);
+    if (methods) res.append('Access-Control-Allow-Methods', methods.join(','));
+    if (headers) res.append('Access-Control-Allow-Headers', headers.join(','));
+
     if (req.method === 'OPTIONS') {
-      res.statusCode = optionsSuccessStatus
-      res.setHeader('Content-Length', '0')
-      res.end()
+      res.status = optionsSuccessStatus
+      res.append('Content-Length', '0')
+      res.end();
     } else {
-      next?.()
+      next();
     }
-  }
+  };
 
-  return middleware
-}
+  return middleware;
+};
+
+export const Cors = (options: CorsOptions) => GenerateGuard(cors(options));

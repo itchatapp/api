@@ -1,9 +1,9 @@
-import { Controller, Context, Limit, Next } from './Controller'
-import { Channel, ChannelTypes, User, RelationshipStatus, DMChannel, PublicUser } from '../structures'
-import { array } from 'pg-query-config'
+import { Controller, Context, Limit, Next } from '@utils'
+import { Channel, ChannelTypes, User, RelationshipStatus, DMChannel, PublicUser } from '@structures'
+
 
 @Limit('5/5s')
-export class UserController extends Controller<Context> {
+export class UserController extends Controller {
   'GET /:user_id'(ctx: Context): Promise<PublicUser> {
     return User.fetchPublicUser(ctx.params.user_id)
   }

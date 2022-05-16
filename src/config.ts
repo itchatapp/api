@@ -1,22 +1,12 @@
-import 'dotenv/config'
-import env from 'env-var'
+import 'dotenv';
 
 const config = {
-  port: env.get('PORT').default(8080).asPortNumber(),
-  database: {
-    uri: env.get('DATABASE_URI').required().asUrlString(),
-    redis: env.get('REDIS_URI').required().asUrlString()
-  },
-  smtp: {
-    enabled: env.get('SMTP_ENABLED').default('true').asBool(),
-    host: env.get('SMTP_HOST').asUrlString(),
-    username: env.get('SMTP_USERNAME').asString(),
-    password: env.get('SMTP_PASSWORD').asString()
-  },
+  port: Deno.env.get('PORT')!,
+  databaseUri: Deno.env.get('DATABASE_URI')!,
   captcha: {
-    enabled: env.get('CAPTCHA_ENABLED').default('true').asBool(),
-    key: env.get('CAPTCHA_KEY').asString(),
-    token: env.get('CAPTCHA_TOKEN').asString()
+    enabled: false,
+    key: '',
+    token: '',
   },
   limits: {
     user: {
@@ -54,18 +44,6 @@ const config = {
       topic: 1000
     }
   },
-  endpoints: {
-    main: env.get('DOMAIN').default('https://itchat.world').asUrlString(),
-    app: '',
-    api: '',
-    cdn: ''
-  }
-}
+};
 
-const [protocol, hostname] = config.endpoints.main.split(/:\/\//, 1)
-
-for (const subdomain of ['app', 'api', 'cdn'] as const) {
-  config.endpoints[subdomain] = `${protocol}://${subdomain}.${hostname}`
-}
-
-export default Object.freeze(config)
+export default config;

@@ -1,19 +1,22 @@
-import { CheckError } from '../errors'
-import { Request, Response, NextFunction } from "@tinyhttp/app"
-import { validator } from '../utils'
-import { AsyncCheckFunction, SyncCheckFunction, ValidationSchema } from "fastest-validator"
+import { RequestHandler } from 'opine';
+import { HTTPError } from '@errors';
+import { validator } from '@utils';
+import { AsyncCheckFunction, SyncCheckFunction, ValidationSchema } from 'validator';
+import { GenerateGuard } from '@utils';
 
+type Schema = AsyncCheckFunction | SyncCheckFunction | ValidationSchema;
+type Type = 'body' | 'params' | 'query';
 
-export const validate = (schema: AsyncCheckFunction | SyncCheckFunction | ValidationSchema, type: 'body' | 'params' | 'query' = 'body'): typeof middleware => {
-  const checker = typeof schema === 'function' ? schema : validator.compile(schema)
+export const validate = (schema: Schema, type: Type = 'body'): typeof middleware => {
+  const checker = typeof schema === 'function' ? schema : validator.compile(schema);
 
-  const middleware = async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
-    const valid = await checker(req[type])
+  const middleware: RequestHandler = async (req, res, next): Promise<void> => {
+    const valid = await checker(req[type]);
+    if (valid !== true) throw new HTTPError('INVALID_BODY', valid);
+    next();
+  };
 
-    if (valid !== true) throw new CheckError(valid)
+  return middleware;
+};
 
-    next()
-  }
-
-  return middleware
-}
+export const Validate = (schema: Schema, type?: Type) => GenerateGuard(validate(schema, type));

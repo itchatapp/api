@@ -1,10 +1,12 @@
-import { Controller, Context, Check, Limit } from '../Controller'
-import { Server, Channel, CreateServerSchema, Member, ChannelTypes } from '../../structures'
-import config from '../../config'
-import sql from '../../database'
+import { Controller, Context, Check, Limit } from '@utils'
+import { Server, Channel, CreateServerSchema, Member, ChannelTypes } from '@structures'
+import config from '@config'
+import sql from '@sql'
 
 @Limit('5/5s')
 export class ServerController extends Controller {
+  path = '/servers'
+
   'GET /'(ctx: Context): Promise<Server[]> {
     return ctx.user.fetchServers()
   }

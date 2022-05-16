@@ -1,28 +1,30 @@
-import { Controller, Context, Check, Limit, Captcha } from '../Controller'
-import { User, Session, CreateUserSchema, LoginUserSchema } from '../../structures'
-import { email } from '../../utils'
-import config from '../../config'
-import argon2 from 'argon2'
+import { Controller, Context } from '@utils'
+import { User, Session } from '@structures'
+import { hash, verify } from "argon2";
+import { Validate, Captcha, Limit } from '@middlewares'
+import sql from '@sql'
+import config from '@config'
+
 
 //@AntiProxy()
 @Limit('30/1h --ip')
 export class AccountController extends Controller {
+  path = '/auth/accounts'
+
   @Captcha()
-  @Check(LoginUserSchema)
+  @Validate({ email: 'email|normalize', password: 'string|min:8|max:32' })
   async 'POST /login'(ctx: Context) {
-    const user = await User.findOne({ email: ctx.body.email })
+    const user = await User.findOne(sql`email = ${ctx.body.email}`)
 
     if (!user.verified) {
       ctx.throw('USER_NOT_VERIFIED')
     }
 
-    if (!await argon2.verify(ctx.body.password, user.password)) {
+    if (!await verify(ctx.body.password, user.password)) {
       ctx.throw('INVALID_PASSWORD')
     }
 
-    const session = Session.from({
-      user_id: user.id
-    })
+    const session = Session.from({ user_id: user.id })
 
     await session.save()
 
@@ -33,12 +35,39 @@ export class AccountController extends Controller {
   }
 
   @Captcha()
-  @Check(CreateUserSchema)
+  @Validate({
+    $$async: true,
+    username: {
+      type: 'string',
+      min: 3,
+      max: config.limits.user.username,
+      pattern: /^[a-z0-9_]+$/i,
+      custom: async (value: string, errors: unknown[]) => {
+        if (['system', 'admin', 'bot', 'developer', 'staff', '___'].includes(value.toLowerCase())) {
+          errors.push({ type: 'unique', actual: value })
+        } else {
+          const exists = await User.count(sql`username = ${value}`)
+          if (exists) errors.push({ type: "unique", actual: value })
+        }
+        return value
+      }
+    },
+    email: {
+      type: 'email',
+      normalize: true,
+      custom: async (value: string, errors: unknown[]) => {
+        const exists = await User.count(sql`email = ${value}`)
+        if (exists) errors.push({ type: "unique", actual: value })
+        return value
+      }
+    },
+    password: 'string|min:8|max:72'
+  })
   async 'POST /register'(ctx: Context) {
     const user = User.from({
       username: ctx.body.username,
       email: ctx.body.email,
-      password: await argon2.hash(ctx.body.password),
+      password: await hash(ctx.body.password),
       verified: !config.smtp.enabled
     })
 
@@ -67,7 +96,7 @@ export class AccountController extends Controller {
       ctx.throw('UNKNOWN_TOKEN')
     }
 
-    const user = await User.findOne({ id: user_id })
+    const user = await User.findOne(sql`id = ${user_id}`)
 
     await user.update({ verified: true })
 

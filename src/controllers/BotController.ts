@@ -1,9 +1,12 @@
-import { Context, Controller, Check } from "./Controller"
-import { Bot, CreateBotSchema } from '../structures'
-import config from '../config';
-import sql from "../database"
+import { Context, Controller } from '@utils'
+import { Bot } from '@structures'
+import { Validate } from '@middlewares'
+import sql from "@sql"
+import config from '@config';
 
 export class BotController extends Controller {
+  path = '/bots'
+
   'USE /'() {
     // Not Implemented yet.
     return 501
@@ -14,11 +17,11 @@ export class BotController extends Controller {
   }
 
   'GET /:bot_id'(ctx: Context): Promise<Bot> {
-    return Bot.findOne({ id: ctx.params.bot_id })
+    return Bot.findOne(sql`id = ${ctx.params.bot_id}`)
   }
 
 
-  @Check(CreateBotSchema)
+  @Validate({ username: 'string' })
   async 'POST /'(ctx: Context): Promise<Bot> {
     const botCount = await Bot.count(sql`owner_id = ${ctx.user.id}`)
 
@@ -35,7 +38,7 @@ export class BotController extends Controller {
   }
 
   async 'DELETE /:bot_id'(ctx: Context) {
-    const bot = await Bot.findOne({ id: ctx.params.bot_id })
+    const bot = await Bot.findOne(sql`id = ${ctx.params.bot_id}`)
     await bot.delete()
   }
 }

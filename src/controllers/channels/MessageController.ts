@@ -1,9 +1,11 @@
-import { Controller, Context, Check, Next, Permission } from '../Controller'
-import { Message, CreateMessageSchema, UpdateMessageSchema } from '../../structures'
-import { Permissions } from '../../utils'
-import { gt, lt, gte } from 'pg-query-config'
+import { Controller, Context, Check, Next, Permissions } from '@utils'
+import { Message, CreateMessageSchema, UpdateMessageSchema } from '@structures'
+import { Permissions } from '@utils'
+
 
 export class MessageController extends Controller {
+  path = '/channels/:channel_id/messages'
+
   async 'USE /'(ctx: Context, next: Next) {
     const permissions = await Permissions.from(ctx.request)
 

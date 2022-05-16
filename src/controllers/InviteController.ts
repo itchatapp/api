@@ -1,7 +1,9 @@
-import { Controller, Context } from './Controller'
-import { Invite, Member } from '../structures'
+import { Controller, Context } from '@utils'
+import { Invite, Member } from '@structures'
 
 export class InviteController extends Controller {
+  path = '/invites'
+
   'GET /:invite_code'(ctx: Context): Promise<Invite> {
     return Invite.findOne({ code: ctx.params.invite_code })
   }

@@ -1,8 +1,10 @@
-import { Controller, Context, Check, Next } from '../Controller'
-import { Member, UpdateMemberSchema, Role } from '../../structures'
-import { is, Permissions } from '../../utils'
+import { Controller, Context, Check, Next } from '@utils'
+import { Member, UpdateMemberSchema, Role } from '@structures'
+import { is, Permissions } from '@utils'
 
 export class ServerMemberController extends Controller {
+  path = '/servers/:server_id/members'
+
   async 'USE /'(ctx: Context, next: Next) {
     const exists = await Member.findOne({
       id: ctx.user.id,
