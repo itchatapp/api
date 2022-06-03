@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/itchatapp/api/compare/v1.0.0...v1.0.1) (2022-06-03)
+
+
+### Bug Fixes
+
+* Run json parser when we need it ([5cb2973](https://github.com/itchatapp/api/commit/5cb29738594b48c50727ed90775f3a1774c86527))
+
 # 1.0.0 (2022-06-03)
 
 
