@@ -7,9 +7,8 @@ interface DeviceInfo {
 
 export class Session extends Base {
   readonly token = nanoid(64);
-  readonly user_id!: bigint;
+  readonly user_id!: string;
   info!: DeviceInfo;
-
   static from(opts: FromOptions<Session, 'user_id'>): Session {
     return Object.assign(new this(), opts);
   }

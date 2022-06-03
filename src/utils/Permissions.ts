@@ -45,7 +45,7 @@ export class Permissions extends BasicPermissions {
     if (channel) permissions.target_id = channel.id
 
     // Yes. we do that.
-    if (user.badges !== 0n && new Badges(user.badges).has(Badges.FLAGS.STAFF)) {
+    if (user.badges !== 0 && new Badges(user.badges).has(Badges.FLAGS.STAFF)) {
       return admin()
     }
 

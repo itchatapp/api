@@ -90,7 +90,7 @@ export class User extends Base {
   email!: string;
   presence: Presence = { status: PresenceStatus.OFFLINE };
   relations: Record<string, RelationshipStatus> = {};
-  badges = 0n;
+  badges = 0;
   avatar?: string;
   verified = false;
 

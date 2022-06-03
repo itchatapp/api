@@ -18,8 +18,8 @@ export enum OverwriteTypes {
 export interface Overwrite {
   id: string
   type: OverwriteTypes
-  allow: bigint
-  deny: bigint
+  allow: number
+  deny: number
 }
 
 export const CreateServerChannelSchema = validator.compile({
