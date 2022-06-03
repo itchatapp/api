@@ -1,5 +1,4 @@
 import Server from './server'
-import { migrate } from './database'
 import { logger } from './utils'
 import config from './config'
 
@@ -13,9 +12,6 @@ try {
     origin: config.endpoints.main
   })
 
-  logger.log('Initialling the database...')
-
-  await migrate()
   await server.listen(config.port)
 
   logger.log('Server running on port:', config.port)

@@ -7,10 +7,12 @@ import argon2 from 'argon2'
 //@AntiProxy()
 @Limit('30/1h --ip')
 export class AccountController extends Controller {
+  path = '/auth/accounts'
+
   @Captcha()
   @Check(LoginUserSchema)
   async 'POST /login'(ctx: Context) {
-    const user = await User.findOne({ email: ctx.body.email })
+    const user = await User.findOne(sql`email = ${ctx.body.email }`)
 
     if (!user.verified) {
       ctx.throw('USER_NOT_VERIFIED')
@@ -67,7 +69,7 @@ export class AccountController extends Controller {
       ctx.throw('UNKNOWN_TOKEN')
     }
 
-    const user = await User.findOne({ id: user_id })
+    const user = await User.findOne(sql`id = ${user_id }`)
 
     await user.update({ verified: true })
 

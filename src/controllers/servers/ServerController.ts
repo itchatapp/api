@@ -5,22 +5,24 @@ import sql from '../../database'
 
 @Limit('5/5s')
 export class ServerController extends Controller {
+  path = '/servers'
+
   'GET /'(ctx: Context): Promise<Server[]> {
     return ctx.user.fetchServers()
   }
 
   'GET /:server_id'(ctx: Context): Promise<Server> {
-    return Server.findOne({ id: ctx.params.server_id })
+    return Server.findOne(sql`id = ${ctx.params.server_id}`)
   }
 
   async 'DELETE /:server_id'(ctx: Context) {
-    const server = await Server.findOne({ id: ctx.params.server_id })
-    
+    const server = await Server.findOne(sql`id = ${ctx.params.server_id}`)
+
     if (ctx.user.id === server.owner_id) {
       await server.delete()
     } else {
-      const member = await Member.findOne({ id: ctx.user.id, server_id: server.id })
-      await member.delete() 
+      const member = await Member.findOne(sql`id = ${ctx.user.id} AND server_id = ${server.id}`)
+      await member.delete()
     }
   }
 
@@ -56,7 +58,6 @@ export class ServerController extends Controller {
     })
 
     // FIXME: Remove "as any"
-    
     await sql.begin((sql) => [
       sql`INSERT INTO ${sql(Server.tableName)} ${sql(server as any)}`,
       sql`INSERT INTO ${sql(Channel.tableName)} ${sql(chat as any)}`,

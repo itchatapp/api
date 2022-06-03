@@ -5,6 +5,8 @@ import sql from '../../database'
 
 
 export class ServerChannelController extends Controller {
+  path = '/channels/:server_id'
+  
   async 'USE /'(ctx: Context, next: Next) {
     const exists = await Member.findOne({
       id: ctx.user.id,
@@ -19,7 +21,7 @@ export class ServerChannelController extends Controller {
   }
 
   'GET /'(ctx: Context) {
-    return Channel.find({ server_id: ctx.params.server_id })
+    return Channel.find(sql`server_id = ${ctx.params.server_id }`)
   }
 
   'GET /:channel_id'({ params }: Context) {

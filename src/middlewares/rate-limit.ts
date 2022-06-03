@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from '@tinyhttp/app'
 import { RateLimiterRedis } from 'rate-limiter-flexible'
 import { createRedisConnection } from '../database/redis'
-import ms from 'ms'
+import ms, { StringValue } from 'ms'
+import { GenerateBaseGuard } from '@itchatapp/controllers'
 
 const storeClient = createRedisConnection()
 
@@ -55,4 +56,8 @@ export const rateLimit = (opts: string, prefix: string): typeof middleware => {
   }
 
   return middleware
+}
+
+export const Limit = (limit: WithFlag<`${number}/${StringValue}`, 'ip'>) => {
+  return GenerateBaseGuard(rateLimit(limit, crypto.randomUUID().slice(5)))
 }

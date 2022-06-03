@@ -1,10 +1,10 @@
-import { Base, Session, Server, Member } from '.'
+import { Base, Session, Server } from '.'
 import { validator } from '../utils'
 import sql from '../database'
 import config from '../config'
 import { Bot } from './Bot'
 
-export type PublicUser = Omit<User, 'email' | 'password' | 'relations' | 'verified'>
+export type PublicUser = Omit<User, 'email' | 'password' | 'relations' | 'verified'>;
 
 export const PUBLIC_USER_PROPS: (keyof PublicUser)[] = [
   'id',
@@ -32,7 +32,7 @@ export const CreateUserSchema = validator.compile({
       if (['system', 'admin', 'bot', 'developer', 'staff', '___'].includes(value.toLowerCase())) {
         errors.push({ type: 'unique', actual: value })
       } else {
-        const exists = await User.findOne({ username: value })
+        const exists = await User.count(sql`username = ${value}`)
         if (exists) errors.push({ type: "unique", actual: value })
       }
       return value
@@ -42,7 +42,7 @@ export const CreateUserSchema = validator.compile({
     type: 'email',
     normalize: true,
     custom: async (value: string, errors: unknown[]) => {
-      const exists = await User.findOne({ email: value })
+      const exists = await User.count(sql`email = ${value}`)
       if (exists) errors.push({ type: "unique", actual: value })
       return value
     }
@@ -85,57 +85,47 @@ export enum RelationshipStatus {
 
 
 export class User extends Base {
-  username!: string
-  password!: string
-  email!: string
-  presence: Presence = { status: PresenceStatus.OFFLINE }
-  relations: Record<string, RelationshipStatus> = {}
-  badges = 0n
-  avatar: Nullable<string> = null
-  verified = false
+  username!: string;
+  password!: string;
+  email!: string;
+  presence: Presence = { status: PresenceStatus.OFFLINE };
+  relations: Record<string, RelationshipStatus> = {};
+  badges = 0n;
+  avatar?: string;
+  verified = false;
 
-  static from(opts: CreateUserOptions): User {
-    return Object.assign(new User(), opts)
+  static from(opts: FromOptions<User, 'username' | 'password' | 'email'>): User {
+    return Object.assign(new this(), opts);
   }
 
   static fetchPublicUser(id: string): Promise<PublicUser> {
-    return User.findOne(sql => sql.select(PUBLIC_USER_PROPS).where({ id }))
+    return User.findOne(sql`id = ${id}`, PUBLIC_USER_PROPS);
   }
 
-  fetchServers(): Promise<Server[]> {
-    return sql<Server[]>`SELECT * FROM ${sql(Server.tableName)} WHERE id IN (
-       SELECT server_id FROM members WHERE id = ${this.id}
-    )`
-  }
-
-  fetchSessions(): Promise<Session[]> {
-    return Session.find({ user_id: this.id })
-  }
-
-  fetchRelations(): Promise<PublicUser[]> {
-    return User.find(sql => sql
-      .select(PUBLIC_USER_PROPS)
-      .where({ id: Object.keys(this.relations) }))
-  }
-
-  fetchBots(): Promise<Bot[]> {
-    return Bot.find({ owner_id: this.id })
-  }
-
-  async member(server: Server | string): Promise<Member> {
-    const server_id = typeof server === 'string' ? server : server.id
-    return await Member.findOne({ id: this.id, server_id })
-  }
-
-  static async fetchByToken(token: string): Promise<Nullable<User>> {
-    const [user]: [User?] = await sql`
+  static async fetchByToken(token: string): Promise<User | null> {
+    const [user] = await sql<User[]>`
          SELECT *
-         FROM ${sql(this.tableName)}
+         FROM users
          LEFT JOIN sessions
          ON sessions.user_id = users.id
          WHERE verified = TRUE 
-         AND sessions.token = ${token}
-    `
-    return user ?? null
+         AND sessions.token = ${token}`;
+    return user ?? null;
+  }
+
+  fetchServers(): Promise<Server[]> {
+    return Server.find(sql`owner_id = ${this.id} OR id IN ( SELECT server_id FROM members WHERE id = ${this.id} )`);
+  }
+
+  fetchSessions(): Promise<Session[]> {
+    return Session.find(sql`user_id = ${this.id}`);
+  }
+
+  fetchRelations(): Promise<PublicUser[]> {
+    return User.find(sql`id IN ${sql(Object.keys(this.relations))}`, PUBLIC_USER_PROPS);
+  }
+
+  fetchBots(): Promise<Bot[]> {
+    return Bot.find(sql`owner_id = ${this.id}`);
   }
 }

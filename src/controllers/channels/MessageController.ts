@@ -1,9 +1,11 @@
 import { Controller, Context, Check, Next, Permission } from '../Controller'
 import { Message, CreateMessageSchema, UpdateMessageSchema } from '../../structures'
 import { Permissions } from '../../utils'
-import { gt, lt, gte } from 'pg-query-config'
+import sql from '../../database'
 
 export class MessageController extends Controller {
+  path = '/channels/:channel_id/messages'
+
   async 'USE /'(ctx: Context, next: Next) {
     const permissions = await Permissions.from(ctx.request)
 
@@ -36,10 +38,7 @@ export class MessageController extends Controller {
   async 'PATCH /:message_id'(ctx: Context): Promise<Message> {
     const { message_id, channel_id } = ctx.params
 
-    const message = await Message.findOne({
-      id: message_id,
-      channel_id
-    })
+    const message = await Message.findOne(sql`id = ${message_id} AND channel_id = ${channel_id}`)
 
     if (message.author_id !== ctx.user.id) {
       ctx.throw('CANNOT_EDIT_MESSAGE_BY_OTHER')
@@ -55,11 +54,7 @@ export class MessageController extends Controller {
   async 'DELETE /:message_id'(ctx: Context): Promise<void> {
     const { message_id, channel_id } = ctx.params
 
-    const message = await Message.findOne({
-      id: message_id,
-      channel_id
-    })
-
+    const message = await Message.findOne(sql`id = ${message_id} AND channel_id = ${channel_id}`)
     const permissions = await Permissions.from(ctx.request)
 
     if (message.author_id !== ctx.user.id && !permissions.has(Permissions.FLAGS.MANAGE_MESSAGES)) {
@@ -82,18 +77,20 @@ export class MessageController extends Controller {
       after,
       around,
       limit
-    } = ctx.query as Record<string, string>
+    } = ctx.query
 
-    const messages = await Message.find((sql) => {
-      sql.where({ channel_id: ctx.params.channel_id })
-
+    const query = () => {
       if (around) {
-        sql.where({ id: gte(around) })
-      } else {
-        if (after) sql.where({ id: gt(after) })
-        if (before) sql.where({ id: lt(before) })
+        return sql`id >= ${around}`
+      } else {      
+        if (after && before) return sql`id > ${after} AND id < ${before}`
+        if (after) return sql`id > ${after}`
+        if (before) return sql`id < ${before}`
+        return sql``
       }
-    }, Number(limit))
+    }
+
+    const messages = await Message.find(sql`channel_id = ${ctx.params.channel_id} AND ${query()} LIMIT = ${Number(limit)}`)
 
     return messages
   }
@@ -106,6 +103,6 @@ export class MessageController extends Controller {
 
   @Permission.has('READ_MESSAGE_HISTORY')
   'GET /:message_id'(ctx: Context): Promise<Message> {
-    return Message.findOne({ id: ctx.params.message_id, channel_id: ctx.params.channel_id })
+    return Message.findOne(sql`id = ${ctx.params.message_id} AND channel_id = ${ctx.params.channel_id}`)
   }
 }

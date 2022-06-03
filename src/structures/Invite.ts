@@ -1,13 +1,5 @@
 import { Base } from '.'
 import { nanoid } from 'nanoid'
-import sql from '../database'
-
-export interface CreateInviteOptions extends Options<Invite> {
-  inviter_id: string
-  channel_id: string
-  server_id: string
-}
-
 
 export class Invite extends Base {
   readonly code = nanoid(8)
@@ -15,8 +7,7 @@ export class Invite extends Base {
   inviter_id!: string
   channel_id!: string
   server_id!: string
-
-  static from(opts: CreateInviteOptions): Invite {
-    return Object.assign(new Invite(), opts)
+  static from(opts: FromOptions<Invite, 'server_id' | 'channel_id' | 'inviter_id'>): Invite {
+    return Object.assign(new this(), opts)
   }
 }

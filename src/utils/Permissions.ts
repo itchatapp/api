@@ -2,7 +2,7 @@ import { is } from '.'
 import { Member, Server, User, Channel, AnyChannel, OverwriteTypes, CategoryChannel, RelationshipStatus } from '../structures'
 import { Request } from '@tinyhttp/app'
 import { Context } from '../controllers/Controller'
-import { Permissions as BasicPermissions, Badges, DEFAULT_PERMISSION_DM } from '@itchatt/utils'
+import { Permissions as BasicPermissions, Badges, DEFAULT_PERMISSION_DM } from '@itchatapp/utils'
 
 
 export interface FetchPermissionsOptions {
@@ -29,9 +29,9 @@ export class Permissions extends BasicPermissions {
   }
 
   static async fetch({ user, server, channel }: FetchPermissionsOptions): Promise<Permissions> {
-    if (is.snowflake(server)) server = await Server.findOne({ id: server })
+    if (is.snowflake(server)) server = await Server.findOne(sql`id = ${server }`)
     if (is.snowflake(channel)) channel = await Channel.findOne<AnyChannel>({ id: channel })
-    if (!server && channel?.inServer()) server = await Server.findOne({ id: channel.server_id })
+    if (!server && channel?.inServer()) server = await Server.findOne(sql`id = ${channel.server_id }`)
 
     let member: Member | null = null
 
@@ -84,7 +84,7 @@ export class Permissions extends BasicPermissions {
     }
 
     if (channel?.isText() || channel?.isCategory() /* | channel?.isVoice() */) {
-      member ??= await Member.findOne({ id: user.id })
+      member ??= await Member.findOne(sql`id = ${user.id }`)
 
       const overwrites = [...channel.overwrites]
 

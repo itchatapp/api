@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from '@tinyhttp/app'
-import { fetch } from '../utils'
 import { HTTPError } from '../errors'
+import fetch from 'node-fetch'
 import config from '../config'
+import { GenerateGuard } from '@itchatapp/controllers'
 
 export const captcha = () => async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
   const key = req.body.captcha_key
@@ -18,8 +19,8 @@ export const captcha = () => async (req: Request, _res: Response, next: NextFunc
 
   const response = await fetch('https://hcaptcha.com/siteverify', {
     method: 'POST',
-    body: payload,
-  }).then((res) => res.json())
+    body: JSON.stringify(payload),
+  }).then((res) => res.json()) as { success: boolean }
 
   if (!response || !response.success) {
     throw new HTTPError('FAILED_CAPTCHA')
@@ -27,3 +28,5 @@ export const captcha = () => async (req: Request, _res: Response, next: NextFunc
 
   next()
 }
+
+export const Captcha = () => GenerateGuard(captcha())

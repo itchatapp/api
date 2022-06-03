@@ -5,11 +5,10 @@ import sql from '../../database'
 
 
 export class ServerRoleController extends Controller {
+  path = '/servers/:server_id/roles'
+
   async 'USE /'(ctx: Context, next: Next) {
-    const exists = await Member.findOne({
-      id: ctx.user.id,
-      server_id: ctx.params.server_id
-    }).catch(() => null)
+    const exists = await Member.count(sql`id = ${ctx.user.id} AND server_id = ${ctx.params.server_id}`)
 
     if (!exists) {
       ctx.throw('UNKNOWN_SERVER')
@@ -19,11 +18,11 @@ export class ServerRoleController extends Controller {
   }
 
   'GET /'(ctx: Context): Promise<Role[]> {
-    return Role.find({ server_id: ctx.params.server_id })
+    return Role.find(sql`server_id = ${ctx.params.server_id}`)
   }
 
-  'GET /:role_id'({ params: { server_id, role_id } }: Context) {
-    return Role.findOne({ id: role_id, server_id })
+  'GET /:role_id'({ params }: Context) {
+    return Role.findOne(sql`id = ${params.role_id} AND server_id = ${params.server_id}`)
   }
 
   @Check(CreateRoleSchema)

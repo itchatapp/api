@@ -1,9 +1,11 @@
 import { Controller, Context, Limit, Next } from './Controller'
 import { Channel, ChannelTypes, User, RelationshipStatus, DMChannel, PublicUser } from '../structures'
-import { array } from 'pg-query-config'
+import sql from '../database'
 
 @Limit('5/5s')
-export class UserController extends Controller<Context> {
+export class UserController extends Controller {
+  path = '/users'
+
   'GET /:user_id'(ctx: Context): Promise<PublicUser> {
     return User.fetchPublicUser(ctx.params.user_id)
   }
@@ -11,12 +13,9 @@ export class UserController extends Controller<Context> {
   async 'GET /:user_id/dm'(ctx: Context): Promise<DMChannel> {
     const { user_id } = ctx.params
     const target = await User.fetchPublicUser(user_id)
-    const exists = await Channel.findOne<DMChannel>({
-      type: ChannelTypes.DM,
-      recipients: array.lc([user_id])
-    }).catch(() => null)
+    const exists = await Channel.findOne(sql`type = ${ChannelTypes.DM} AND recipients @> ${[user_id]}`)
 
-    if (exists) {
+    if (exists?.isDM()) {
       return exists
     }
 
@@ -48,7 +47,7 @@ export class UserController extends Controller<Context> {
     if (relations[targetId] === RelationshipStatus.FRIEND) ctx.throw('ALREADY_FRIENDS')
     if (relations[targetId] === RelationshipStatus.OUTGOING) ctx.throw('ALREADY_SENT_REQUEST')
 
-    const target = await User.findOne({ id: targetId }), targetRelations = target.relations
+    const target = await User.findOne(sql`id = ${targetId }`), targetRelations = target.relations
 
     if (targetRelations[ctx.user.id] === RelationshipStatus.OUTGOING) { // Accept friend request.
       targetRelations[ctx.user.id] = relations[target.id] = RelationshipStatus.FRIEND
@@ -70,7 +69,7 @@ export class UserController extends Controller<Context> {
 
     if (relations[targetId] === RelationshipStatus.BLOCKED) ctx.throw('BLOCKED')
 
-    const target = await User.findOne({ id: targetId }), targetRelations = target.relations
+    const target = await User.findOne(sql`id = ${targetId }`), targetRelations = target.relations
 
     relations[target.id] = RelationshipStatus.BLOCKED
 
@@ -85,7 +84,7 @@ export class UserController extends Controller<Context> {
 
     if (!relations[targetId]) return 404
 
-    const target = await User.findOne({ id: targetId }), targetRelations = target.relations
+    const target = await User.findOne(sql`id = ${targetId}`), targetRelations = target.relations
 
     delete relations[target.id]
 

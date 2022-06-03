@@ -1,13 +1,13 @@
 import { Controller, Context, Check, Next } from '../Controller'
 import { Member, UpdateMemberSchema, Role } from '../../structures'
 import { is, Permissions } from '../../utils'
+import sql from '../../database'
 
 export class ServerMemberController extends Controller {
+  path = '/servers/:server_id/members'
+
   async 'USE /'(ctx: Context, next: Next) {
-    const exists = await Member.findOne({
-      id: ctx.user.id,
-      server_id: ctx.params.server_id
-    }).catch(() => null)
+    const exists = await Member.count(sql`id = ${ctx.user.id} AND server_id = ${ctx.params.server_id}`)
 
     if (!exists) {
       ctx.throw('UNKNOWN_SERVER')
@@ -19,19 +19,19 @@ export class ServerMemberController extends Controller {
 
   @Check({ limit: 'number|convert|min:1|max:1000|default:500' }, 'query')
   'GET /'(ctx: Context): Promise<Member[]> {
-    return Member.find({ server_id: ctx.params.server_id }, Number(ctx.query.limit))
+    return Member.find(sql`server_id = ${ctx.params.server_id} LIMIT = ${Number(ctx.query.limit)}`)
   }
 
   'GET /:member_id'(ctx: Context): Promise<Member> {
-    return Member.findOne({ id: ctx.params.member_id, server_id: ctx.params.server_id })
+    return Member.findOne(sql`id = ${ctx.params.member_id} AND server_id = ${ctx.params.server_id}`)
   }
 
 
   @Check(UpdateMemberSchema)
   async 'PATCH /:member_id'(ctx: Context): Promise<Member> {
     const { server_id, member_id } = ctx.params
-    
-    const member = await Member.findOne({ id: member_id, server_id })
+
+    const member = await Member.findOne(sql`id = ${member_id} AND server_id = ${server_id}`)
     const permissions = await Permissions.from(ctx.request)
     const changes: Record<string, unknown> = {}
 
@@ -47,7 +47,7 @@ export class ServerMemberController extends Controller {
     if (!is.nil(ctx.body.roles)) {
       if (!permissions.has(Permissions.FLAGS.MANAGE_ROLES)) ctx.throw('MISSING_PERMISSIONS')
 
-      const roles = await Role.find({ server_id: ctx.params.server_id })
+      const roles = await Role.find(sql`server_id = ${ctx.params.server_id}`)
 
       changes.roles = []
 
@@ -73,10 +73,7 @@ export class ServerMemberController extends Controller {
       if (!permissions.has(Permissions.FLAGS.KICK_MEMBERS)) ctx.throw('MISSING_PERMISSIONS')
     }
 
-    const member = await Member.findOne({
-      id: member_id,
-      server_id
-    })
+    const member = await Member.findOne(sql`id = ${member_id} AND server_id = ${server_id}`)
 
     await member.delete()
   }

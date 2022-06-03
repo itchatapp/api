@@ -1,12 +1,7 @@
-import { Base } from '.'
+import { Base } from './Base'
 import { validator } from '../utils'
-import sql from '../database'
 import config from '../config'
 
-export interface CreateMessageOptions extends Options<Message> {
-  author_id: string
-  channel_id: string
-}
 
 export const CreateMessageSchema = validator.compile({
   content: `string|max:${config.limits.message.length}|min:1`,
@@ -54,8 +49,8 @@ export interface Reply {
 
 export class Message extends Base {
   created_at = Date.now()
-  edited_at: Nullable<number> = null
-  content: Nullable<string> = null
+  edited_at?: number
+  content?: string
   embeds: Embed[] = []
   attachments: Attachment[] = []
   mentions: string[] = []
@@ -63,12 +58,11 @@ export class Message extends Base {
   channel_id!: string
   author_id!: string
 
-
   isEmpty(): boolean {
     return !this.content?.length && !this.attachments.length
   }
 
-  static from(opts: CreateMessageOptions): Message {
-    return Object.assign(new Message(), opts)
+  static from(opts: FromOptions<Message, 'author_id' | 'channel_id'>): Message {
+    return Object.assign(new this(), opts)
   }
 }

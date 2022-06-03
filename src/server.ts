@@ -27,7 +27,10 @@ class Server {
       .use('/auth', middlewares.cors({ origin, methods: ['GET', 'POST'] }))
       .use(middlewares.rateLimit('20/5s', 'global'))
 
-    controllers.mount(this.http)
+    for (const Controller of Object.values(controllers)) {
+      const controller = new Controller()
+      controller.mount(this.http)
+    }
 
     const NON_AUTH_ROUTES = [
       '/auth/accounts',

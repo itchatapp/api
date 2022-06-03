@@ -3,28 +3,22 @@ import { validator } from '../utils'
 import sql from '../database'
 import config from '../config'
 
-export interface CreateMemberOptions extends Options<Member> {
-  id: string
-  server_id: string
-}
-
 export const UpdateMemberSchema = validator.compile({
   nickname: `string|min:0|max:${config.limits.member.nickname}|nullable`,
   roles: 'snowflake[]|unique|optional'
 })
 
-
 export class Member extends Base {
-  nickname: Nullable<string> = null
+  nickname?: string
   joined_at = Date.now()
   server_id!: string
   roles: string[] = []
-
+  
   fetchRoles(): Promise<Role[]> {
-    return Role.find({ id: this.roles })
+    return Role.find(sql`id = ${sql(this.roles)}`);
   }
 
-  static from(opts: CreateMemberOptions): Member {
-    return Object.assign(new Member(), opts)
+  static from(opts: FromOptions<Member, 'server_id' | 'id'>): Member {
+    return Object.assign(new this(), opts)
   }
 }

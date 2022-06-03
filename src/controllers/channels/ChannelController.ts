@@ -1,22 +1,20 @@
 import { Controller, Context, Check, Limit } from '../Controller'
-import { Channel, ChannelTypes, CreateGroupSchema, GroupChannel, User } from '../../structures'
+import { Channel, ChannelTypes, CreateGroupSchema, User } from '../../structures'
 import { Permissions } from '../../utils'
-import { array } from 'pg-query-config'
 import config from '../../config'
 import sql from '../../database'
 
 
 @Limit('5/5s')
 export class ChannelController extends Controller {
+  path = '/channels/@me'
+
   'GET /'(ctx: Context) {
-    return Channel.find({ recipients: array.lc([ctx.user.id]) })
+    return Channel.find(sql`recipients::jsonb ? ${ctx.user.id}`)
   }
 
   'GET /:channel_id'(ctx: Context) {
-    return Channel.findOne({
-      id: ctx.params.channel_id,
-      recipients: array.lc([ctx.user.id])
-    })
+    return Channel.findOne(sql`id = ${ctx.params.channel_id} AND recipients::jsonb ? ${ctx.user.id}`)
   }
 
   @Check(CreateGroupSchema)
@@ -43,13 +41,13 @@ export class ChannelController extends Controller {
     const { user_id, group_id } = ctx.params
 
     const [group, target] = await Promise.all([
-      Channel.findOne<GroupChannel>({
-        id: group_id,
-        type: ChannelTypes.GROUP,
-        recipients: array.lc([ctx.user.id])
-      }),
-      User.findOne({ id: user_id })
+      Channel.findOne(sql`id = ${group_id} AND type = ${ChannelTypes.GROUP} AND recipients::jsonb ? ${ctx.user.id}`),
+      User.findOne(sql`id = ${user_id}`)
     ])
+
+    if (!group.isGroup()) {
+      throw new Error('?')
+    }
 
     if (group.recipients.length >= config.limits.group.members) {
       ctx.throw('MAXIMUM_GROUP_MEMBERS')
@@ -69,14 +67,15 @@ export class ChannelController extends Controller {
   async 'DELETE /:group_id/:user_id'(ctx: Context) {
     const { user_id, group_id } = ctx.params
 
+
     const [group, target] = await Promise.all([
-      Channel.findOne<GroupChannel>({
-        id: group_id,
-        type: ChannelTypes.GROUP,
-        recipients: array.lc([ctx.user.id])
-      }),
-      User.findOne({ id: user_id })
+      Channel.findOne(sql`id = ${group_id} AND type = ${ChannelTypes.GROUP} AND recipients::jsonb ? ${ctx.user.id}`),
+      User.findOne(sql`id = ${user_id}`)
     ])
+
+    if (!group.isGroup()) {
+      throw new Error('?')
+    }
 
     if (ctx.user.id === group.owner_id && ctx.user.id === target.id) {
       ctx.throw('MISSING_ACCESS')
@@ -101,12 +100,9 @@ export class ChannelController extends Controller {
   }
 
   async 'DELETE /:channel_id'(ctx: Context) {
-    const channel = await Channel.findOne<GroupChannel>({
-      id: ctx.params.channel_id,
-      type: ChannelTypes.GROUP,
-      recipients: array.lc([ctx.user.id])
-    })
+    const channel = await Channel.findOne(sql`id = ${ctx.params.channel_id} AND type = ${ChannelTypes.GROUP} AND recipients::jsonb ? ${ctx.user.id}`)
 
+    if (!channel.isGroup()) return
     if (channel.owner_id !== ctx.user.id) {
       ctx.throw('MISSING_ACCESS')
     }

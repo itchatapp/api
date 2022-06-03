@@ -4,6 +4,8 @@ import config from '../config';
 import sql from "../database"
 
 export class BotController extends Controller {
+  path = '/bots'
+  
   'USE /'() {
     // Not Implemented yet.
     return 501
@@ -14,7 +16,7 @@ export class BotController extends Controller {
   }
 
   'GET /:bot_id'(ctx: Context): Promise<Bot> {
-    return Bot.findOne({ id: ctx.params.bot_id })
+    return Bot.findOne(sql`id = ${ctx.params.bot_id }`)
   }
 
 
@@ -35,7 +37,7 @@ export class BotController extends Controller {
   }
 
   async 'DELETE /:bot_id'(ctx: Context) {
-    const bot = await Bot.findOne({ id: ctx.params.bot_id })
+    const bot = await Bot.findOne(sql`id = ${ctx.params.bot_id }`)
     await bot.delete()
   }
 }
