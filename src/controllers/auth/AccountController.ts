@@ -3,6 +3,7 @@ import { User, Session, CreateUserSchema, LoginUserSchema } from '../../structur
 import { email } from '../../utils'
 import config from '../../config'
 import argon2 from 'argon2'
+import sql from '../../database'
 
 //@AntiProxy()
 @Limit('30/1h --ip')

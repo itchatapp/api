@@ -6,12 +6,9 @@ import sql from '../../database'
 
 export class ServerChannelController extends Controller {
   path = '/channels/:server_id'
-  
+
   async 'USE /'(ctx: Context, next: Next) {
-    const exists = await Member.findOne({
-      id: ctx.user.id,
-      server_id: ctx.params.server_id
-    }).catch(() => null)
+    const exists = await Member.count(sql`id = ${ctx.user.id} AND server_id = ${ctx.params.server_id}`)
 
     if (!exists) {
       ctx.throw('UNKNOWN_SERVER')
@@ -21,14 +18,11 @@ export class ServerChannelController extends Controller {
   }
 
   'GET /'(ctx: Context) {
-    return Channel.find(sql`server_id = ${ctx.params.server_id }`)
+    return Channel.find(sql`server_id = ${ctx.params.server_id}`)
   }
 
   'GET /:channel_id'({ params }: Context) {
-    return Channel.findOne<ServerChannel>({
-      id: params.channel_id,
-      server_id: params.server_id
-    })
+    return Channel.findOne(sql`id = ${params.channel_id} AND server_id = ${params.server_id}`)
   }
 
 
@@ -71,11 +65,7 @@ export class ServerChannelController extends Controller {
 
   @Permission.has('MANAGE_CHANNELS')
   async 'DELETE /:channel_id'(ctx: Context): Promise<void> {
-    const channel = await Channel.findOne<ServerChannel>({
-      id: ctx.params.channel_id,
-      server_id: ctx.params.server_id
-    })
-
+    const channel = await Channel.findOne(sql`id = ${ctx.params.channel_id} AND server_id = ${ctx.params.server_id}`)
     await channel.delete()
   }
 }
