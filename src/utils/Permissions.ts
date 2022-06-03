@@ -1,9 +1,9 @@
 import { is } from '.'
-import { Member, Server, User, Channel, AnyChannel, OverwriteTypes, CategoryChannel, RelationshipStatus } from '../structures'
+import { Member, Server, User, Channel, OverwriteTypes, CategoryChannel, RelationshipStatus } from '../structures'
 import { Request } from '@tinyhttp/app'
 import { Context } from '../controllers/Controller'
 import { Permissions as BasicPermissions, Badges, DEFAULT_PERMISSION_DM } from '@itchatapp/utils'
-
+import sql from '../database'
 
 export interface FetchPermissionsOptions {
   user: User
@@ -29,9 +29,9 @@ export class Permissions extends BasicPermissions {
   }
 
   static async fetch({ user, server, channel }: FetchPermissionsOptions): Promise<Permissions> {
-    if (is.snowflake(server)) server = await Server.findOne(sql`id = ${server }`)
-    if (is.snowflake(channel)) channel = await Channel.findOne<AnyChannel>({ id: channel })
-    if (!server && channel?.inServer()) server = await Server.findOne(sql`id = ${channel.server_id }`)
+    if (is.snowflake(server)) server = await Server.findOne(sql`id = ${server}`)
+    if (is.snowflake(channel)) channel = await Channel.findOne(sql`id = ${channel}`)
+    if (!server && channel?.inServer()) server = await Server.findOne(sql`id = ${channel.server_id}`)
 
     let member: Member | null = null
 
@@ -55,7 +55,7 @@ export class Permissions extends BasicPermissions {
 
       permissions.add(server.permissions) // Add default @everyone permissions.
 
-      member = await user.member(server)
+      member = await Member.findOne(sql`id = ${user.id} AND server_id = ${server.id}`)
 
       for (const role of await server.fetchRoles()) {
         if (member.roles.includes(role.id)) permissions.add(role.permissions)
@@ -84,12 +84,12 @@ export class Permissions extends BasicPermissions {
     }
 
     if (channel?.isText() || channel?.isCategory() /* | channel?.isVoice() */) {
-      member ??= await Member.findOne(sql`id = ${user.id }`)
+      member ??= await Member.findOne(sql`id = ${user.id}`)
 
       const overwrites = [...channel.overwrites]
 
       if (!channel.isCategory() && channel.parent_id) {
-        const parent = await Channel.findOne<CategoryChannel>({ id: channel.parent_id })
+        const parent = await Channel.findOne(sql`id = ${channel.parent_id}`) as CategoryChannel
         overwrites.push(...parent.overwrites)
       }
 

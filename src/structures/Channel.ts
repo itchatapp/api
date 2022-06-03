@@ -70,7 +70,7 @@ export class Channel extends Base {
   static from(opts: FromOptions<DMChannel, 'type' | 'recipients'>): DMChannel;
   static from(opts: FromOptions<CategoryChannel, 'type' | 'name' | 'server_id'>): CategoryChannel;
   static from(opts: FromOptions<GroupChannel, 'type' | 'name' | 'recipients' | 'owner_id'>): GroupChannel;
-  static from(opts: FromOptions<VoiceChannel, 'type' | 'name'>): VoiceChannel
+  static from(opts: FromOptions<VoiceChannel, 'type' | 'name' | 'server_id'>): VoiceChannel
   static from(opts: { type: ChannelTypes } & Partial<AnyChannel>): AnyChannel {
     let channel: AnyChannel;
 
@@ -130,5 +130,6 @@ export class CategoryChannel extends Channel {
 
 export class VoiceChannel extends Channel {
   readonly type = ChannelTypes.VOICE;
+  server_id!: string;
   name!: string;
 }
