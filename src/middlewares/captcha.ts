@@ -5,7 +5,7 @@ import config from '../config'
 import { GenerateGuard } from '@itchatapp/controllers'
 
 export const captcha = () => async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
-  const key = req.body.captcha_key
+  const key = req.params.key
 
   if (!key) {
     throw new HTTPError('FAILED_CAPTCHA')
