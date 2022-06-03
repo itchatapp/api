@@ -3,6 +3,7 @@ import { RateLimiterRedis } from 'rate-limiter-flexible'
 import { createRedisConnection } from '../database/redis'
 import ms, { StringValue } from 'ms'
 import { GenerateBaseGuard } from '@itchatapp/controllers'
+import crypto from 'node:crypto'
 
 const storeClient = createRedisConnection()
 
