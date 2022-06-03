@@ -40,7 +40,6 @@ class Server {
     // Add other middlewares
     this.http
       .use(middlewares.validID())
-      .use(middlewares.json({ limit: 102400 /* 100KB */ }))
       .use(middlewares.auth({ ignored: NON_AUTH_ROUTES }))
   }
 
