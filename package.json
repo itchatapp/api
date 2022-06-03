@@ -13,6 +13,7 @@
   "type": "module",
   "dependencies": {
     "@itchatapp/controllers": "^1.0.4",
+    "@itchatapp/migrations": "1.0.5",
     "@itchatapp/utils": "^1.0.1",
     "@tinyhttp/app": "^2.0.12",
     "argon2": "^0.28.5",
@@ -25,9 +26,9 @@
     "kleur": "^4.1.4",
     "ms": "^3.0.0-canary.1",
     "nanoid": "^3.1.25",
+    "node-fetch": "^3.2.5",
     "postgres": "^3.2.4",
-    "rate-limiter-flexible": "^2.3.7",
-    "node-fetch": "^3.2.5"
+    "rate-limiter-flexible": "^2.3.7"
   },
   "devDependencies": {
     "@types/ioredis": "^4.27.1",

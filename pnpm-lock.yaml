@@ -2,6 +2,7 @@ lockfileVersion: 5.4
 
 specifiers:
   '@itchatapp/controllers': ^1.0.4
+  '@itchatapp/migrations': 1.0.5
   '@itchatapp/utils': ^1.0.1
   '@tinyhttp/app': ^2.0.12
   '@types/ioredis': ^4.27.1
@@ -23,6 +24,7 @@ specifiers:
 
 dependencies:
   '@itchatapp/controllers': 1.0.4
+  '@itchatapp/migrations': 1.0.5
   '@itchatapp/utils': 1.0.1
   '@tinyhttp/app': 2.0.20
   argon2: 0.28.5
@@ -53,6 +55,11 @@ packages:
   /@itchatapp/controllers/1.0.4:
     resolution: {integrity: sha512-0VH740A9qa1h8EjRhHlQMDq58VM3irgR3NopE+JXgdaKWipN09lGvNhfsQehabuYcMR9p77RF77NO5DvInlgFg==}
     engines: {node: '>=16'}
+    dev: false
+
+  /@itchatapp/migrations/1.0.5:
+    resolution: {integrity: sha512-ugCNtwulkfiYClk3h7TQGgFuToJZPnmN2plvx1jrhTwLA0tGGlfUgZSG9phOo1DgcB2AZ543k9FJLx6baEZt6Q==}
+    engines: {node: '>=16.0.0'}
     dev: false
 
   /@itchatapp/utils/1.0.1:

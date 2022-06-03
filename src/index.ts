@@ -1,6 +1,9 @@
 import Server from './server'
 import { logger } from './utils'
 import config from './config'
+import migrate from '@itchatapp/migrations'
+import sql from './database'
+import { join } from 'node:path'
 
 export const server = new Server()
 
@@ -12,8 +15,10 @@ try {
     origin: config.endpoints.main
   })
 
-  await server.listen(config.port)
+  logger.log('Initialling the database...')
+  await migrate({ sql, path: join(process.cwd(), 'migrations') })
 
+  await server.listen(config.port)
   logger.log('Server running on port:', config.port)
 } catch (err) {  
   logger
