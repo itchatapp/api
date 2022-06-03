@@ -1,5 +1,5 @@
 {
-  "name": "@itchat/server",
+  "name": "@itchatapp/api",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -12,22 +12,22 @@
   },
   "type": "module",
   "dependencies": {
-    "@itchatt/controllers": "1.0.1",
-    "@itchatt/utils": "^0.0.1",
+    "@itchatapp/controllers": "^1.0.4",
+    "@itchatapp/utils": "^1.0.1",
     "@tinyhttp/app": "^2.0.12",
-    "argon2": "^0.28.2",
-    "dotenv": "^10.0.0",
-    "emailjs": "^3.7.0",
+    "argon2": "^0.28.5",
+    "dotenv": "^16.0.1",
+    "emailjs": "^4.0.0",
     "env-var": "^7.0.1",
     "fastest-validator": "^1.12.0",
-    "helmet": "^4.6.0",
-    "ioredis": "^4.28.0",
+    "helmet": "^5.1.0",
+    "ioredis": "^5.0.6",
     "kleur": "^4.1.4",
     "ms": "^3.0.0-canary.1",
     "nanoid": "^3.1.25",
-    "pg-query-config": "^1.0.17",
-    "postgres": "^3.0.5",
-    "rate-limiter-flexible": "^2.3.4"
+    "postgres": "^3.2.4",
+    "rate-limiter-flexible": "^2.3.7",
+    "node-fetch": "^3.2.5"
   },
   "devDependencies": {
     "@types/ioredis": "^4.27.1",
