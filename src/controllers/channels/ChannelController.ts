@@ -9,11 +9,11 @@ import sql from '../../database'
 export class ChannelController extends Controller {
   path = '/channels/@me'
 
-  'GET /'(ctx: Context): Promise<GroupChannel[]> {
-    return Channel.find(sql`recipients::jsonb ? ${ctx.user.id}`) as unknown as Promise<GroupChannel[]>
+  'GET /'(ctx: Context): Promise<GroupChannel[] | DMChannel[]> {
+    return Channel.find(sql`recipients::jsonb ? ${ctx.user.id}`) as unknown as Promise<GroupChannel[] | DMChannel[]>
   }
 
-  'GET /:channel_id'(ctx: Context): Promise<GroupChannel> {
+  'GET /:channel_id'(ctx: Context): Promise<GroupChannel | DMChannel> {
     return Channel.findOne(sql`id = ${ctx.params.channel_id} AND recipients::jsonb ? ${ctx.user.id}`) as Promise<GroupChannel>
   }
 

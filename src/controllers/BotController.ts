@@ -36,7 +36,7 @@ export class BotController extends Controller {
     return bot
   }
 
-  async 'DELETE /:bot_id'(ctx: Context) {
+  async 'DELETE /:bot_id'(ctx: Context): Promise<void> {
     const bot = await Bot.findOne(sql`id = ${ctx.params.bot_id }`)
     await bot.delete()
   }

@@ -15,7 +15,7 @@ export class ServerController extends Controller {
     return Server.findOne(sql`id = ${ctx.params.server_id}`)
   }
 
-  async 'DELETE /:server_id'(ctx: Context) {
+  async 'DELETE /:server_id'(ctx: Context): Promise<void> {
     const server = await Server.findOne(sql`id = ${ctx.params.server_id}`)
 
     if (ctx.user.id === server.owner_id) {

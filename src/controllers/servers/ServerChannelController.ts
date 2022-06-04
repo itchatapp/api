@@ -17,18 +17,18 @@ export class ServerChannelController extends Controller {
     next()
   }
 
-  'GET /'(ctx: Context) {
-    return Channel.find(sql`server_id = ${ctx.params.server_id}`)
+  'GET /'(ctx: Context): Promise<ServerChannel[]> {
+    return Channel.find(sql`server_id = ${ctx.params.server_id}`) as unknown as Promise<ServerChannel[]>
   }
 
-  'GET /:channel_id'({ params }: Context) {
-    return Channel.findOne(sql`id = ${params.channel_id} AND server_id = ${params.server_id}`)
+  'GET /:channel_id'(ctx: Context): Promise<ServerChannel> {
+    return Channel.findOne(sql`id = ${ctx.params.channel_id} AND server_id = ${ctx.params.server_id}`) as Promise<ServerChannel>
   }
 
 
   @Check(CreateServerChannelSchema)
   @Permission.has('MANAGE_CHANNELS')
-  async 'POST /'(ctx: Context) {
+  async 'POST /'(ctx: Context): Promise<ServerChannel> {
     const server_id = ctx.params.server_id
     const channelCount = await Channel.count(sql`server_id = ${server_id}`)
 
@@ -59,7 +59,7 @@ export class ServerChannelController extends Controller {
 
     await channel.save()
 
-    return channel
+    return channel as ServerChannel
   }
 
 

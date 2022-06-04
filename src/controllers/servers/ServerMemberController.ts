@@ -65,7 +65,7 @@ export class ServerMemberController extends Controller {
     return member
   }
 
-  async 'DELETE /:member_id'(ctx: Context) {
+  async 'DELETE /:member_id'(ctx: Context): Promise<void> {
     const { server_id, member_id } = ctx.params
 
     if (member_id !== ctx.user.id) {

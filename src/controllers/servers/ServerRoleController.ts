@@ -21,7 +21,7 @@ export class ServerRoleController extends Controller {
     return Role.find(sql`server_id = ${ctx.params.server_id}`)
   }
 
-  'GET /:role_id'({ params }: Context) {
+  'GET /:role_id'({ params }: Context): Promise<Role> {
     return Role.findOne(sql`id = ${params.role_id} AND server_id = ${params.server_id}`)
   }
 

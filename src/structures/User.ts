@@ -4,7 +4,6 @@ import sql from '../database'
 import config from '../config'
 import { Bot } from './Bot'
 
-export type PublicUser = Omit<User, 'email' | 'password' | 'relations' | 'verified'>;
 
 export const PUBLIC_USER_PROPS: (keyof PublicUser)[] = [
   'id',
@@ -53,6 +52,9 @@ export const LogoutUserSchema = validator.compile({
   token: 'string',
   user_id: 'string'
 })
+
+
+export type PublicUser = Omit<User, 'email' | 'password' | 'relations' | 'verified'>;
 
 export interface Presence {
   text?: string
