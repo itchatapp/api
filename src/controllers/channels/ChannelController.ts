@@ -1,5 +1,5 @@
 import { Controller, Context, Check, Limit } from '../Controller'
-import { Channel, ChannelTypes, CreateGroupSchema, User } from '../../structures'
+import { Channel, ChannelTypes, CreateGroupSchema, DMChannel, GroupChannel, User } from '../../structures'
 import { Permissions } from '../../utils'
 import config from '../../config'
 import sql from '../../database'
@@ -9,16 +9,16 @@ import sql from '../../database'
 export class ChannelController extends Controller {
   path = '/channels/@me'
 
-  'GET /'(ctx: Context) {
-    return Channel.find(sql`recipients::jsonb ? ${ctx.user.id}`)
+  'GET /'(ctx: Context): Promise<GroupChannel[]> {
+    return Channel.find(sql`recipients::jsonb ? ${ctx.user.id}`) as unknown as Promise<GroupChannel[]>
   }
 
-  'GET /:channel_id'(ctx: Context) {
-    return Channel.findOne(sql`id = ${ctx.params.channel_id} AND recipients::jsonb ? ${ctx.user.id}`)
+  'GET /:channel_id'(ctx: Context): Promise<GroupChannel> {
+    return Channel.findOne(sql`id = ${ctx.params.channel_id} AND recipients::jsonb ? ${ctx.user.id}`) as Promise<GroupChannel>
   }
 
   @Check(CreateGroupSchema)
-  async 'POST /'(ctx: Context) {
+  async 'POST /'(ctx: Context): Promise<GroupChannel> {
     const groupCount = await Channel.count(sql`type = ${ChannelTypes.GROUP} AND recipients::jsonb ? ${ctx.user.id}`)
 
     if (groupCount >= config.limits.user.groups) {
@@ -37,7 +37,7 @@ export class ChannelController extends Controller {
     return group
   }
 
-  async 'POST /:group_id/:user_id'(ctx: Context) {
+  async 'POST /:group_id/:user_id'(ctx: Context): Promise<GroupChannel> {
     const { user_id, group_id } = ctx.params
 
     const [group, target] = await Promise.all([
@@ -64,10 +64,8 @@ export class ChannelController extends Controller {
     return group
   }
 
-  async 'DELETE /:group_id/:user_id'(ctx: Context) {
+  async 'DELETE /:group_id/:user_id'(ctx: Context): Promise<void> {
     const { user_id, group_id } = ctx.params
-
-
     const [group, target] = await Promise.all([
       Channel.findOne(sql`id = ${group_id} AND type = ${ChannelTypes.GROUP} AND recipients::jsonb ? ${ctx.user.id}`),
       User.findOne(sql`id = ${user_id}`)
@@ -99,7 +97,7 @@ export class ChannelController extends Controller {
     })
   }
 
-  async 'DELETE /:channel_id'(ctx: Context) {
+  async 'DELETE /:channel_id'(ctx: Context): Promise<void> {
     const channel = await Channel.findOne(sql`id = ${ctx.params.channel_id} AND type = ${ChannelTypes.GROUP} AND recipients::jsonb ? ${ctx.user.id}`)
 
     if (!channel.isGroup()) return

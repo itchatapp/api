@@ -1,7 +1,7 @@
 import { Controller } from './Controller'
 
 export class PingController extends Controller {
-    'GET /'(): string {
+    async 'GET /'(): Promise<string> {
       return `Pong! ${process.uptime()}`
     }
 }

@@ -15,12 +15,6 @@ export const PUBLIC_USER_PROPS: (keyof PublicUser)[] = [
 ]
 
 
-export interface CreateUserOptions extends Partial<User> {
-  username: string
-  password: string
-  email: string
-}
-
 export const CreateUserSchema = validator.compile({
   $$async: true,
   username: {

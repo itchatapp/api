@@ -15,7 +15,7 @@ export class SessionController extends Controller {
   }
 
   @Check(LogoutUserSchema)
-  async 'POST /logout/:session_id'(ctx: Context) {
+  async 'POST /logout/:session_id'(ctx: Context): Promise<void> {
     const session = await Session.findOne(sql`id = ${ctx.params.session_id} AND token = ${ctx.body.token}`)
     await session.delete()
   }

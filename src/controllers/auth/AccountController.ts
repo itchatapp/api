@@ -12,8 +12,8 @@ export class AccountController extends Controller {
 
   @Captcha()
   @Check(LoginUserSchema)
-  async 'POST /login'(ctx: Context) {
-    const user = await User.findOne(sql`email = ${ctx.body.email }`)
+  async 'POST /login'(ctx: Context): Promise<Session> {
+    const user = await User.findOne(sql`email = ${ctx.body.email}`)
 
     if (!user.verified) {
       ctx.throw('USER_NOT_VERIFIED')
@@ -29,10 +29,7 @@ export class AccountController extends Controller {
 
     await session.save()
 
-    return {
-      token: session.token,
-      id: user.id
-    }
+    return session
   }
 
   @Captcha()
@@ -61,7 +58,7 @@ export class AccountController extends Controller {
     }
   }
 
-  async 'GET /verify/:user_id/:code'(ctx: Context) {
+  async 'GET /verify/:user_id/:code'(ctx: Context): Promise<void> {
     const { user_id, code } = ctx.params
 
     const verified = await email.verify(user_id, code)

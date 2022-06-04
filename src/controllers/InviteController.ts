@@ -9,7 +9,7 @@ export class InviteController extends Controller {
     return Invite.findOne(sql`code = ${ctx.params.invite_code}`)
   }
 
-  async 'POST /:invite_code'(ctx: Context) {
+  async 'POST /:invite_code'(ctx: Context): Promise<void> {
     const invite = await Invite.findOne(sql`code = ${ctx.params.invite_code}`)
     const alreadyJoined = await Member.findOne(sql`id = ${ctx.user.id} AND server_id = ${invite.server_id}`).catch(() => null)
 
