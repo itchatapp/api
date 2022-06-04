@@ -1,11 +1,6 @@
 import fs from 'node:fs/promises'
 import { join } from 'node:path'
-import { readdir, Param, Response, parse } from './utils.js'
-
-const classes = {}
-const enums = {}
-const interfaces = {}
-const types = {}
+import { readdir, parse, ensure, Response, Param } from './utils.js'
 
 const OpenAPI = {
     openapi: "3.0.0",
@@ -31,6 +26,8 @@ const OpenAPI = {
     }
 }
 
+const classes = {}, enums = {}, interfaces = {}, types = {}
+
 for (const path of await readdir(join(process.cwd(), 'src/structures'))) {
     if (!['index.ts', '/Base.ts'].every(name => !path.endsWith(name))) continue
 
@@ -40,7 +37,6 @@ for (const path of await readdir(join(process.cwd(), 'src/structures'))) {
         if (extendsThisClass && extendsThisClass !== 'Base') name = name + ':' + extendsThisClass
         classes[name] = $class.replace(/.+\(.*\).*\{(.|\n)*?\n\s*\}/g, '').replace(/static .+\(.+\)(?::\s*.+)/g, '')
     }
-
     for (const [$interface, name] of content.matchAll(/interface\s*([a-z]+)\s*\{(.|\n)*?\n\}/gi)) interfaces[name] = $interface
     for (const [$enum, name] of content.matchAll(/enum\s*([a-z]+)\s*\{(?:.|\n)*?\n\}/gi)) enums[name] = $enum
     for (const [$type, name] of content.matchAll(/type\s*([a-z]+)\s*=\s*.+/gi)) types[name] = $type
@@ -48,7 +44,7 @@ for (const path of await readdir(join(process.cwd(), 'src/structures'))) {
 
 
 for (const [name, content] of Object.entries(interfaces)) {
-    const schema = OpenAPI.components.schemas[name] ?? (OpenAPI.components.schemas[name] = {})
+    const schema = ensure(OpenAPI, `components.schemas.${name}`)
 
     for (const [name, type] of parse(content)) {
         if (type.oneOf) {
@@ -56,8 +52,8 @@ for (const [name, content] of Object.entries(interfaces)) {
         } else if (type.additionalProperties) {
             schema.additionalProperties = type.additionalProperties
         } else {
-            if (!schema.required) schema.required = []
-            if (!schema.properties) schema.properties = {}
+            ensure(schema, 'required', [])
+            ensure(schema, 'properties', {})
             if (!type.nullable) schema.required.push(name)
             schema.properties[name] = type
         }
@@ -66,7 +62,7 @@ for (const [name, content] of Object.entries(interfaces)) {
 
 for (const [$name, content] of Object.entries(classes)) {
     const [name, extendsThisClass] = $name.split(':')
-    const schema = OpenAPI.components.schemas[name] ?? (OpenAPI.components.schemas[name] = {})
+    const schema = ensure(OpenAPI, `components.schemas.${name}`)
 
     function process(content) {
         for (const [name, type] of parse(content)) {
@@ -75,8 +71,8 @@ for (const [$name, content] of Object.entries(classes)) {
             } else if (type.additionalProperties) {
                 schema.additionalProperties = type.additionalProperties
             } else {
-                if (!schema.required) schema.required = []
-                if (!schema.properties) schema.properties = {}
+                ensure(schema, 'required', [])
+                ensure(schema, 'properties', {})
                 if (!type.nullable) schema.required.push(name)
                 schema.properties[name] = type
             }
@@ -127,16 +123,13 @@ for (const path of await readdir(join(process.cwd(), 'src/controllers'))) {
 
         if (path.endsWith('/')) path = path.slice(0, -1)
 
-        let schema = OpenAPI.paths[path]?.[method];
-
-        if (!schema) schema = OpenAPI.paths[path] = {
-            [method]: {
-                summary: '',
-                description: '',
-                parameters: [],
-                responses: {},
-            }
-        }[method]
+        // TODO: Get summary and description.
+        const schema = ensure(OpenAPI, `paths.${path}.${method}`, {
+            summary: '',
+            description: '',
+            parameters: [],
+            responses: {},
+        })
 
         for (const [, name] of path.matchAll(/{([a-z]+_id)}/gi)) {
             schema.parameters.push(Param(name))

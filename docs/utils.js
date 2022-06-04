@@ -18,6 +18,9 @@ export async function readdir(dir) {
 
 export const isPrimitive = (type) => ['string', 'number', 'bigint', 'boolean', 'integer'].includes(type)
 
+export function Union(type) {
+    return type.split(' | ').map(x => x.replace(/'|"|;/g, ''))
+}
 
 export function Response({ status, description, type }) {
     function Json(obj) {
@@ -29,15 +32,13 @@ export function Response({ status, description, type }) {
         case 200: {
             const array = type.endsWith('[]')
 
-            if (array) return {
-                description,
-                content: Json({ schema: Ref(type.slice(0, -2)) })
-            }
+            if (array) type = type.replace(/\[\]/g, '')
 
-            return {
-                description,
-                content: Json({ schema: Ref(type) })
-            }
+            const union = Union(type)
+
+            if (union.length > 1) return { description, content: Json({ schema: Schema({ union, array }) }) }
+
+            return { description, content: Json({ schema: Schema({ type, array }) }) }
         }
         default: return {
             description: "An error occurred.",
@@ -78,7 +79,7 @@ export function Schema({ type, array, nullable, $enum, record, union }) {
     } else if (record) {
         return { additionalProperties: Schema({ type: record }) }
     } else if (union) {
-        return { oneOf: [union.map(x => Schema({ type: x }))] }
+        return { oneOf: union.map(x => Schema({ type: x, array })) }
     } else {
         return array ? Array(Ref(type), nullable) : Ref(type)
     }
@@ -108,7 +109,7 @@ export function parse(content) {
         name = name.replace('?', '')
         type = type.replace('[]', '')
 
-        results.push([name, Schema({ type, array, nullable, description: '' })])
+        results.push([name, Schema({ type, array, nullable })])
     }
 
     while (result = typeRegex.exec(content)) {
@@ -121,7 +122,7 @@ export function parse(content) {
             continue
         }
 
-        const union = type.split(' | ').map(x => x.replace(/'|"|;/g, ''))
+        const union = Union(type)
 
         if (union.length > 1) {
             results.push([name, Schema({ union })])
@@ -140,4 +141,15 @@ export function parse(content) {
     }
 
     return results
+}
+
+export function ensure(obj, path, defaultValue = {}) {
+    let parent = obj, value = obj, lastKey = path
+
+    for (const key of path.split('.')) {
+        (parent = value, value = parent[key], lastKey = key)
+        if (typeof value === 'undefined') value = parent[key] = path.endsWith(lastKey) ? defaultValue : {}
+    }
+
+    return parent[lastKey] = parent[lastKey] ?? defaultValue
 }
